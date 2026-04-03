@@ -1,0 +1,133 @@
+@import "tailwindcss";
+
+/* ─── Design Tokens ──────────────────────────────────────────────────────── */
+:root {
+  /* Brand */
+  --teal: #0d7377;
+  --teal-light: #14a085;
+  --green: #2d6a4f;
+  --gold: #c9973a;
+
+  /* Card types */
+  --word: #2d6a4f;
+  --ayah: #0d7377;
+  --surah: #6b3fa0;
+
+  /* SRS tiers */
+  --stranger: #e07b39;
+  --familiar: #c9973a;
+  --known: #2d6a4f;
+  --memorized: #0d7377;
+  --mastered: #2563eb;
+  --preserved: #6b3fa0;
+
+  /* Feedback */
+  --correct: #22c55e;
+  --incorrect: #ef4444;
+
+  /* Light mode */
+  --bg-base: #f4f6fa;
+  --bg-raised: #ffffff;
+  --bg-card: #ffffff;
+  --border: #e2e8f0;
+  --text: #1a1f2e;
+  --text-muted: #6b7a8d;
+  --text-faint: #9aa5b4;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-base: #0e1117;
+    --bg-raised: #181d2a;
+    --bg-card: #1f2535;
+    --border: #2a3145;
+    --text: #e8edf5;
+    --text-muted: #7a8899;
+    --text-faint: #4a5568;
+  }
+}
+
+/* ─── Base ───────────────────────────────────────────────────────────────── */
+* {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background-color: var(--bg-base);
+  color: var(--text);
+  font-family: var(--font-dm-sans), 'DM Sans', sans-serif;
+  min-height: 100dvh;
+}
+
+/* ─── Arabic ─────────────────────────────────────────────────────────────── */
+.arabic {
+  font-family: var(--font-amiri), 'Amiri', serif;
+  direction: rtl;
+  text-align: center;
+  line-height: 1.8;
+}
+
+.arabic-word {
+  font-family: var(--font-amiri), 'Amiri', serif;
+  direction: rtl;
+  font-size: 4.5rem;
+  line-height: 1.6;
+}
+
+.arabic-ayah {
+  font-family: var(--font-amiri), 'Amiri', serif;
+  direction: rtl;
+  font-size: 1.75rem;
+  line-height: 2;
+}
+
+/* ─── Card ───────────────────────────────────────────────────────────────── */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  padding: 2rem;
+}
+
+/* ─── Animations ─────────────────────────────────────────────────────────── */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Shake used for wrong-type hint (typed meaning instead of transliteration, etc.) */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%       { transform: translateX(-8px); }
+  40%       { transform: translateX(8px); }
+  60%       { transform: translateX(-5px); }
+  80%       { transform: translateX(5px); }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.2s ease-out;
+}
+
+/* Flash: rely on CSS transition on the element — no jarring keyframe blink */
+.flash-correct   { border-color: var(--correct)   !important; }
+.flash-incorrect { border-color: var(--incorrect) !important; }
+
+/* Applied to the inputs wrapper when user types the wrong field type */
+.shake-anim { animation: shake 0.45s ease-in-out; }
+
+/* ─── Scrollbar ──────────────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
