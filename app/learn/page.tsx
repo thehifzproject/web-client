@@ -28,6 +28,25 @@ interface TestItem {
 
 const MAX_RETRIES = 2
 
+let audioCtx: AudioContext | null = null
+let currentSource: AudioBufferSourceNode | null = null
+function playAudio(url: string) {
+  if (!url) return
+  if (currentSource) { try { currentSource.stop() } catch {} currentSource = null }
+  if (!audioCtx) audioCtx = new AudioContext()
+  fetch(url)
+    .then(r => r.arrayBuffer())
+    .then(buf => audioCtx!.decodeAudioData(buf))
+    .then(decoded => {
+      const src = audioCtx!.createBufferSource()
+      src.buffer = decoded
+      src.connect(audioCtx!.destination)
+      src.start(0)
+      currentSource = src
+    })
+    .catch(() => {})
+}
+
 function buildWordTests(words: WordItem[]): TestItem[] {
   const items: TestItem[] = []
   for (const w of words) {
@@ -191,6 +210,14 @@ export default function LearnPage() {
     setTimeout(() => setFlash('none'), 900)
   }
 
+  function skipTest() {
+    setLastCorrect(false)
+    setShowResult(true)
+    setHintMessage('')
+    setFlash('incorrect')
+    setTimeout(() => setFlash('none'), 900)
+  }
+
   async function nextTest() {
     const item = testQueue[0]
     if (!item) return
@@ -310,6 +337,7 @@ export default function LearnPage() {
             onAnswer={(v) => { setAnswer(v); if (hintMessage) setHintMessage('') }}
             onAnswer2={setAnswer2}
             onSubmit={checkCurrentAnswer}
+            onSkip={skipTest}
             onNext={nextTest}
             showResult={showResult}
             lastCorrect={lastCorrect}
@@ -350,11 +378,6 @@ function BrowseCard({ item, sessionType, onPrev, onNext, isFirst, isLast }: {
   isLast: boolean
 }) {
   if (!item) return null
-
-  function playAudio(url: string) {
-    if (!url) return
-    new Audio(url).play().catch(() => {})
-  }
 
   const isWord = sessionType === 'words'
   const isAyah = sessionType === 'ayahs'
@@ -438,13 +461,14 @@ function BrowseCard({ item, sessionType, onPrev, onNext, isFirst, isLast }: {
 
 // ─── Test Card ────────────────────────────────────────────────────────────────
 
-function TestCard({ item, answer, answer2, onAnswer, onAnswer2, onSubmit, onNext, showResult, lastCorrect, flash, shakeActive, hintMessage, inputRef }: {
+function TestCard({ item, answer, answer2, onAnswer, onAnswer2, onSubmit, onSkip, onNext, showResult, lastCorrect, flash, shakeActive, hintMessage, inputRef }: {
   item: TestItem
   answer: string
   answer2: string
   onAnswer: (v: string) => void
   onAnswer2: (v: string) => void
   onSubmit: () => void
+  onSkip: () => void
   onNext: () => void
   showResult: boolean
   lastCorrect: boolean
@@ -507,6 +531,12 @@ function TestCard({ item, answer, answer2, onAnswer, onAnswer2, onSubmit, onNext
         </>
       )}
 
+      {showResult && item.audioUrl && (
+        <button className="audio-btn" onClick={() => playAudio(item.audioUrl!)}>
+          <Volume2 size={16} /> Play audio
+        </button>
+      )}
+
       {/* Input */}
       {!showResult && (
         <div className={`test-inputs ${shakeActive ? 'shake-anim' : ''}`}>
@@ -550,6 +580,7 @@ function TestCard({ item, answer, answer2, onAnswer, onAnswer2, onSubmit, onNext
           )}
           {hintMessage && <p className="hint-message">{hintMessage}</p>}
           <button className="test-submit" onClick={onSubmit}>Submit</button>
+          <button className="skip-btn" onClick={onSkip}>I don&apos;t know</button>
         </div>
       )}
 
@@ -566,21 +597,16 @@ function TestCard({ item, answer, answer2, onAnswer, onAnswer2, onSubmit, onNext
               {item.secondaryAnswer && <> · Ayah <strong>{item.secondaryAnswer}</strong></>}
             </p>
           )}
-          {item.audioUrl && (
-            <button className="audio-btn" onClick={() => new Audio(item.audioUrl!).play().catch(() => {})}>
-              <Volume2 size={15} /> Play audio
-            </button>
-          )}
           <button className="test-submit" onClick={onNext} autoFocus>Next</button>
         </div>
       )}
 
       <style>{`
-        .test-card { background:var(--bg-card); border:2px solid var(--border); border-radius:1.25rem; padding:3rem 2.5rem; width:100%; max-width:580px; display:flex; flex-direction:column; align-items:center; gap:0.85rem; min-height:480px; transition:border-color 0.4s ease; }
+        .test-card { background:var(--bg-card); border:2px solid var(--border); border-radius:1.25rem; padding:3rem 2.5rem 1rem; width:100%; max-width:580px; display:flex; flex-direction:column; align-items:center; gap:0.85rem; min-height:480px; transition:border-color 0.4s ease; }
         .test-type-label { font-size:0.8rem; font-weight:700; letter-spacing:0.08em; color:var(--text-muted); text-transform:uppercase; }
         .test-prompt { color:var(--text-muted); font-size:1rem; text-align:center; margin:0; }
         .test-ayah-ref { font-family:var(--font-crimson),serif; font-size:1.25rem; color:var(--text); font-weight:600; text-align:center; }
-        .test-inputs { width:100%; display:flex; flex-direction:column; gap:0.75rem; margin-top:auto; }
+        .test-inputs { width:100%; display:flex; flex-direction:column; gap:0.75rem; margin-top:auto; padding-top:1.5rem; }
         .identify-inputs { display:grid; grid-template-columns:1fr auto; gap:0.5rem; }
         .test-input { width:100%; background:var(--bg-base); border:1px solid var(--border); border-radius:0.6rem; padding:0.875rem 1rem; color:var(--text); font-size:1rem; outline:none; transition:border-color 0.15s; resize:none; }
         .test-input:focus { border-color:var(--teal); }
@@ -589,11 +615,15 @@ function TestCard({ item, answer, answer2, onAnswer, onAnswer2, onSubmit, onNext
         .hint-message { font-size:0.875rem; color:var(--gold); text-align:center; margin:0; font-weight:500; }
         .test-submit { width:100%; background:var(--teal); color:#fff; border:none; border-radius:0.6rem; padding:0.875rem; font-size:1rem; font-weight:600; cursor:pointer; transition:background 0.15s; }
         .test-submit:hover { background:var(--teal-light); }
-        .result-block { width:100%; display:flex; flex-direction:column; gap:0.875rem; margin-top:auto; }
+        .result-block { width:100%; display:flex; flex-direction:column; gap:0.875rem; margin-top:auto; padding-bottom:3rem; }
         .result-icon { display:flex; align-items:center; gap:0.5rem; font-weight:600; font-size:1.1rem; }
         .result-block.correct .result-icon { color:var(--correct); }
         .result-block.incorrect .result-icon { color:var(--incorrect); }
         .result-answer { font-size:0.9rem; color:var(--text-muted); margin:0; line-height:1.5; }
+        .audio-btn { display:flex; align-items:center; gap:0.4rem; background:var(--bg-base); border:1px solid var(--border); border-radius:2rem; padding:0.45rem 1rem; font-size:0.875rem; color:var(--text-muted); cursor:pointer; transition:all 0.15s; margin-top:0.25rem; width:fit-content; }
+        .audio-btn:hover { color:var(--teal); border-color:var(--teal); }
+        .skip-btn { background:none; border:none; color:var(--text-muted); font-size:0.875rem; cursor:pointer; padding:0.25rem; transition:color 0.15s; align-self:center; width:fit-content; }
+        .skip-btn:hover { color:var(--text); }
       `}</style>
     </div>
   )

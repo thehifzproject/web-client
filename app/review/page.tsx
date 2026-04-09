@@ -83,6 +83,14 @@ export default function ReviewPage() {
     setTimeout(() => setFlash('none'), 900)
   }
 
+  function skipCard() {
+    setLastCorrect(false)
+    setShowResult(true)
+    setHintMessage('')
+    setFlash('incorrect')
+    setTimeout(() => setFlash('none'), 900)
+  }
+
   async function nextCard() {
     if (!card || submitting) return
     setSubmitting(true)
@@ -109,9 +117,12 @@ export default function ReviewPage() {
     }
   }
 
+  const audioRef = useRef<HTMLAudioElement | null>(null)
   function playAudio(url?: string) {
     if (!url) return
-    new Audio(url).play().catch(() => {})
+    if (audioRef.current) { audioRef.current.pause(); audioRef.current = null }
+    audioRef.current = new Audio(url)
+    audioRef.current.play().catch(() => {})
   }
 
   if (loading) {
@@ -242,6 +253,7 @@ export default function ReviewPage() {
               )}
               {hintMessage && <p className="hint-message">{hintMessage}</p>}
               <button className="test-submit" onClick={checkCurrentAnswer}>Submit</button>
+              <button className="skip-btn" onClick={skipCard}>I don&apos;t know</button>
             </div>
           )}
 
@@ -295,6 +307,8 @@ export default function ReviewPage() {
         .result-block.correct .result-icon { color:var(--correct); }
         .result-block.incorrect .result-icon { color:var(--incorrect); }
         .result-answer { font-size:0.9rem; color:var(--text-muted); margin:0; line-height:1.5; }
+        .skip-btn { background:none; border:none; color:var(--text-muted); font-size:0.875rem; cursor:pointer; padding:0.5rem; transition:color 0.15s; }
+        .skip-btn:hover { color:var(--text); }
         @keyframes spin { to { transform:rotate(360deg); } }
         .animate-spin { animation:spin 1s linear infinite; }
       `}</style>

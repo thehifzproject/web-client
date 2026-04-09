@@ -5,8 +5,15 @@ import type { ReviewSchedule } from '@/lib/cards'
 
 const DOW_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 
-function utcDateStr(d: Date) {
-  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`
+function localDateStr(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+function fmtHour(h: number) {
+  if (h === 0) return '12 AM'
+  if (h < 12) return `${h} AM`
+  if (h === 12) return '12 PM'
+  return `${h - 12} PM`
 }
 
 function fmtHourShort(h: number) {
@@ -16,19 +23,29 @@ function fmtHourShort(h: number) {
   return `${h - 12}p`
 }
 
+interface DayInfo {
+  dateStr: string
+  isToday: boolean
+  isTomorrow: boolean
+  isPast: boolean
+  futureCount: number
+  pastCount: number
+}
+
 function buildMonth(byDate: Record<string, number>, pastByDate: Record<string, number>, offset: number) {
   const now = new Date()
-  const todayStr = utcDateStr(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())))
-  const tomorrowStr = utcDateStr(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1)))
+  const todayStr = localDateStr(now)
+  const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
+  const tomorrowStr = localDateStr(tomorrow)
 
-  const rawMonth = now.getUTCMonth() + offset
-  const year = now.getUTCFullYear() + Math.floor(rawMonth / 12)
+  const rawMonth = now.getMonth() + offset
+  const year = now.getFullYear() + Math.floor(rawMonth / 12)
   const month = ((rawMonth % 12) + 12) % 12
-  const firstDow = new Date(Date.UTC(year, month, 1)).getUTCDay()
-  const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate()
-  const monthName = new Date(Date.UTC(year, month, 1)).toLocaleString('en-US', { month: 'long', timeZone: 'UTC' })
+  const firstDow = new Date(year, month, 1).getDay()
+  const daysInMonth = new Date(year, month + 1, 0).getDate()
+  const monthName = new Date(year, month, 1).toLocaleString('en-US', { month: 'long' })
 
-  const days = []
+  const days: DayInfo[] = []
   for (let d = 1; d <= daysInMonth; d++) {
     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
     days.push({
@@ -65,12 +82,20 @@ function cellBg(isPast: boolean, isToday: boolean, pastCount: number, futureCoun
   return futureColor(futureCount)
 }
 
-// ─── Tooltip ──────────────────────────────────────────────────────────────────
+function selectionOutline(isPast: boolean, isToday: boolean, pastCount: number, futureCount: number): string {
+  const count = isPast || (isToday && pastCount > 0) ? pastCount : futureCount
+  if (count === 0) return 'var(--text-faint)'
+  return isPast || (isToday && pastCount > 0)
+    ? 'color-mix(in srgb, var(--green) 90%, black)'
+    : 'color-mix(in srgb, var(--teal) 90%, black)'
+}
+
+// ─── Tooltip (hover) ─────────────────────────────────────────────────────────
 
 const TT_WIDTH = 200
 const TT_HEADER_H = 36
-const TT_ROW_H = 6       // px per hour row
-const TT_TIMELINE_H = 24 * TT_ROW_H  // 144px
+const TT_ROW_H = 6
+const TT_TIMELINE_H = 24 * TT_ROW_H
 const TT_PAD = 12
 const TT_TOTAL_H = TT_HEADER_H + TT_TIMELINE_H + TT_PAD * 2
 
@@ -88,11 +113,9 @@ function Tooltip({
 }) {
   const { x, y, cellH, dateStr, isPast, isToday, pastCount, futureCount } = state
 
-  // Show above if enough room, else below
   const above = y - TT_TOTAL_H - 8 > 0
   const top = above ? y - TT_TOTAL_H - 8 : y + cellH + 8
 
-  // Clamp horizontally
   const rawLeft = x - TT_WIDTH / 2
   const left = Math.max(8, Math.min(rawLeft, (typeof window !== 'undefined' ? window.innerWidth : 1200) - TT_WIDTH - 8))
 
@@ -100,20 +123,17 @@ function Tooltip({
   const dayName = date.toLocaleString('en-US', { weekday: 'short', timeZone: 'UTC' })
   const dateFmt = date.toLocaleString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
 
-  // Determine which hour data to use — available for all future dates (today onwards)
-  const hours = !isPast ? (schedule.hoursByDate[dateStr] ?? []) : null
-
+  const hours = schedule.hoursByDate[dateStr] ?? []
   const totalCount = isPast || isToday ? pastCount : futureCount
-  const hourMap = new Map(hours?.map(h => [h.hour, h.count]) ?? [])
-  const maxHourCount = hours && hours.length > 0 ? Math.max(...hours.map(h => h.count), 1) : 1
-  const hasHourData = hours !== null
+  const hourMap = new Map(hours.map(h => [h.hour, h.count]))
+  const maxHourCount = hours.length > 0 ? Math.max(...hours.map(h => h.count), 1) : 1
+  const hasHourData = hours.length > 0
 
   return (
     <div
       className="tt-wrap"
       style={{ position: 'fixed', top, left, width: TT_WIDTH, zIndex: 9999, pointerEvents: 'none' }}
     >
-      {/* Arrow pointing to cell */}
       <div className={`tt-arrow ${above ? 'tt-arrow-down' : 'tt-arrow-up'}`}
         style={{ left: Math.min(Math.max(x - left, 10), TT_WIDTH - 10) }}
       />
@@ -139,9 +159,7 @@ function Tooltip({
                       <div
                         className={`tt-hb ${isPast ? 'tt-hb-g' : 'tt-hb-t'}`}
                         style={{ width: `${Math.max(8, (count / maxHourCount) * 100)}%` }}
-                      >
-                        <span className="tt-hc">{count}</span>
-                      </div>
+                      />
                     )}
                   </div>
                 </div>
@@ -170,10 +188,9 @@ function Tooltip({
         .tt-hr { display:flex; align-items:center; height:${TT_ROW_H}px; }
         .tt-hl { font-size:0.48rem; color:var(--text-faint); width:1.8rem; text-align:right; padding-right:3px; flex-shrink:0; line-height:1; font-variant-numeric:tabular-nums; }
         .tt-ht { flex:1; height:100%; position:relative; border-top:1px solid color-mix(in srgb,var(--border) 50%,transparent); }
-        .tt-hb { position:absolute; top:1px; bottom:0; left:0; border-radius:1px; display:flex; align-items:center; }
+        .tt-hb { position:absolute; top:1px; bottom:0; left:0; border-radius:1px; }
         .tt-hb-g { background:color-mix(in srgb,var(--green) 70%,var(--bg-base)); }
         .tt-hb-t { background:color-mix(in srgb,var(--teal) 70%,var(--bg-base)); }
-        .tt-hc { font-size:0.42rem; color:white; padding:0 2px; white-space:nowrap; line-height:1; }
         .tt-summary { display:flex; align-items:center; gap:4px; padding:4px 0; font-size:0.75rem; color:var(--text-muted); }
         .tt-sum-n { font-size:1.1rem; font-weight:700; line-height:1; }
         .tt-g-text { color:var(--green); }
@@ -187,16 +204,103 @@ function Tooltip({
   )
 }
 
-// ─── Main component ───────────────────────────────────────────────────────────
+// ─── Detail panel (click) ────────────────────────────────────────────────────
+
+function DetailPanel({
+  day, schedule,
+}: {
+  day: DayInfo
+  schedule: ReviewSchedule
+}) {
+  const { dateStr, isPast, pastCount, futureCount } = day
+
+  const date = new Date(dateStr + 'T00:00:00Z')
+  const dayName = date.toLocaleString('en-US', { weekday: 'long', timeZone: 'UTC' })
+  const dateFmt = date.toLocaleString('en-US', { month: 'long', day: 'numeric', timeZone: 'UTC' })
+
+  const hours = schedule.hoursByDate[dateStr] ?? []
+  const totalCount = isPast ? pastCount : futureCount
+  const hourMap = new Map(hours.map(h => [h.hour, h.count]))
+  const maxHourCount = hours.length > 0 ? Math.max(...hours.map(h => h.count), 1) : 1
+
+  return (
+    <div className="dp-wrap">
+      <div className="dp-head">
+        <div className="dp-title">
+          <span className="dp-day">{dayName}, {dateFmt}</span>
+          <span className={`dp-badge ${isPast ? 'tt-g' : 'tt-t'}`}>
+            {isPast ? 'Activity' : 'Scheduled'}
+          </span>
+        </div>
+        {totalCount > 0 && (
+          <span className={`dp-total ${isPast ? 'tt-g-text' : 'tt-t-text'}`}>
+            {totalCount} {isPast ? 'reviewed' : 'scheduled'}
+          </span>
+        )}
+      </div>
+
+      {hours.length > 0 ? (
+        <div className="dp-timeline">
+          {Array.from({ length: 24 }, (_, h) => {
+            const count = hourMap.get(h) ?? 0
+            const isLabel = h % 3 === 0
+            return (
+              <div key={h} className="dp-hr">
+                <span className="dp-hl">{isLabel ? fmtHour(h) : ''}</span>
+                <div className="dp-ht">
+                  {count > 0 && (
+                    <div className="dp-hb-wrap">
+                      <div
+                        className={`dp-hb ${isPast ? 'tt-hb-g' : 'tt-hb-t'}`}
+                        style={{ width: `${Math.max(6, (count / maxHourCount) * 100)}%` }}
+                      />
+                      <span className={`dp-hc ${isPast ? 'tt-g-text' : 'tt-t-text'}`}>{count}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      ) : (
+        <p className="dp-empty">
+          {totalCount > 0
+            ? `${totalCount} ${isPast ? 'reviews completed' : 'cards scheduled'}`
+            : isPast ? 'No activity' : 'Nothing scheduled'}
+        </p>
+      )}
+
+      <style>{`
+        .dp-wrap { border-top:1px solid var(--border); padding-top:0.875rem; }
+        .dp-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:0.5rem; flex-wrap:wrap; gap:0.25rem; }
+        .dp-title { display:flex; align-items:center; gap:0.5rem; }
+        .dp-day { font-size:0.82rem; font-weight:700; color:var(--text); }
+        .dp-badge { font-size:0.6rem; font-weight:700; padding:2px 6px; border-radius:3px; white-space:nowrap; }
+        .dp-total { font-size:0.7rem; font-weight:600; }
+        .dp-timeline { display:flex; flex-direction:column; gap:0; }
+        .dp-hr { display:flex; align-items:center; height:12px; }
+        .dp-hl { font-size:0.6rem; color:var(--text-faint); width:3rem; text-align:right; padding-right:6px; flex-shrink:0; line-height:1; font-variant-numeric:tabular-nums; }
+        .dp-ht { flex:1; height:100%; position:relative; border-top:1px solid color-mix(in srgb,var(--border) 40%,transparent); }
+        .dp-hb-wrap { display:flex; align-items:center; gap:4px; height:100%; }
+        .dp-hb { height:8px; border-radius:2px; min-width:4px; }
+        .dp-hc { font-size:0.6rem; font-weight:600; line-height:1; }
+        .dp-empty { font-size:0.78rem; color:var(--text-faint); text-align:center; margin:0; font-style:italic; }
+      `}</style>
+    </div>
+  )
+}
+
+// ─── Main component ──────────────────────────────────────────────────────────
 
 export function ReviewCalendar({ schedule }: { schedule: ReviewSchedule }) {
   const [offset, setOffset] = useState(0)
   const [tooltip, setTooltip] = useState<TooltipState | null>(null)
+  const [selectedDay, setSelectedDay] = useState<DayInfo | null>(null)
 
   const { year, monthName, firstDow, days } = buildMonth(schedule.byDate, schedule.pastByDate, offset)
   const hasAnyData = Object.keys(schedule.byDate).length > 0 || Object.keys(schedule.pastByDate).length > 0
 
-  const handleEnter = useCallback((e: React.MouseEvent<HTMLDivElement>, day: typeof days[0]) => {
+  const handleEnter = useCallback((e: React.MouseEvent<HTMLDivElement>, day: DayInfo) => {
     const rect = e.currentTarget.getBoundingClientRect()
     setTooltip({
       x: rect.left + rect.width / 2,
@@ -211,6 +315,10 @@ export function ReviewCalendar({ schedule }: { schedule: ReviewSchedule }) {
   }, [])
 
   const handleLeave = useCallback(() => setTooltip(null), [])
+
+  const handleClick = useCallback((day: DayInfo) => {
+    setSelectedDay(prev => prev?.dateStr === day.dateStr ? null : day)
+  }, [])
 
   return (
     <>
@@ -228,9 +336,9 @@ export function ReviewCalendar({ schedule }: { schedule: ReviewSchedule }) {
         </div>
 
         <div className="rcal-nav">
-          <button className="rcal-nb" onClick={() => setOffset(o => o - 1)} aria-label="Previous month">‹</button>
+          <button className="rcal-nb" onClick={() => { setOffset(o => o - 1); setSelectedDay(null) }} aria-label="Previous month">&lsaquo;</button>
           <span className="rcal-ml">{monthName} {year}</span>
-          <button className="rcal-nb" onClick={() => setOffset(o => o + 1)} aria-label="Next month">›</button>
+          <button className="rcal-nb" onClick={() => { setOffset(o => o + 1); setSelectedDay(null) }} aria-label="Next month">&rsaquo;</button>
         </div>
 
         <div className="rcal-dow">
@@ -241,15 +349,22 @@ export function ReviewCalendar({ schedule }: { schedule: ReviewSchedule }) {
           {Array.from({ length: firstDow }).map((_, i) => (
             <div key={`p${i}`} className="rcal-cell" style={{ background: 'transparent', cursor: 'default' }} />
           ))}
-          {days.map((day) => (
-            <div
-              key={day.dateStr}
-              className={`rcal-cell${day.isToday ? ' rcal-today' : ''}`}
-              style={{ background: cellBg(day.isPast, day.isToday, day.pastCount, day.futureCount) }}
-              onMouseEnter={(e) => handleEnter(e, day)}
-              onMouseLeave={handleLeave}
-            />
-          ))}
+          {days.map((day) => {
+            const isSelected = selectedDay?.dateStr === day.dateStr
+            return (
+              <div
+                key={day.dateStr}
+                className={`rcal-cell${day.isToday && !selectedDay ? ' rcal-today' : ''}${isSelected ? ' rcal-selected' : ''}`}
+                style={{
+                  background: cellBg(day.isPast, day.isToday, day.pastCount, day.futureCount),
+                  ...(isSelected ? { outlineColor: selectionOutline(day.isPast, day.isToday, day.pastCount, day.futureCount) } : {}),
+                }}
+                onMouseEnter={(e) => handleEnter(e, day)}
+                onMouseLeave={handleLeave}
+                onClick={() => handleClick(day)}
+              />
+            )
+          })}
         </div>
 
         <div className="rcal-legend">
@@ -270,6 +385,8 @@ export function ReviewCalendar({ schedule }: { schedule: ReviewSchedule }) {
             <span className="rcal-lg-lbl">Scheduled</span>
           </div>
         </div>
+
+        {selectedDay && <DetailPanel day={selectedDay} schedule={schedule} />}
 
         {!hasAnyData && (
           <p className="rcal-empty">Start learning to see your activity here.</p>
@@ -294,9 +411,10 @@ export function ReviewCalendar({ schedule }: { schedule: ReviewSchedule }) {
           .rcal-dow span { font-size:0.62rem; font-weight:600; color:var(--text-faint); text-align:center; line-height:1; padding-bottom:3px; }
 
           .rcal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
-          .rcal-cell { aspect-ratio:1; border-radius:4px; cursor:pointer; transition:filter 0.1s; }
+          .rcal-cell { aspect-ratio:1; border-radius:4px; cursor:pointer; transition:filter 0.1s,outline-color 0.15s; }
           .rcal-cell:hover { filter:brightness(1.3); }
-          .rcal-today { outline:2px solid var(--teal); outline-offset:0; }
+          .rcal-today { outline:2px solid var(--teal); outline-offset:1px; }
+          .rcal-selected { outline:2px solid; outline-offset:1px; }
 
           .rcal-legend { display:flex; gap:0.75rem; align-items:center; flex-wrap:wrap; }
           .rcal-lg-group { display:flex; align-items:center; gap:0.35rem; }
@@ -305,6 +423,13 @@ export function ReviewCalendar({ schedule }: { schedule: ReviewSchedule }) {
           .rcal-lg-lbl { font-size:0.72rem; color:var(--text-muted); font-weight:500; }
 
           .rcal-empty { font-size:0.78rem; color:var(--text-faint); text-align:center; margin:0; }
+
+          .tt-hb-g { background:color-mix(in srgb,var(--green) 70%,var(--bg-base)); }
+          .tt-hb-t { background:color-mix(in srgb,var(--teal) 70%,var(--bg-base)); }
+          .tt-g { background:color-mix(in srgb,var(--green) 15%,transparent); color:var(--green); }
+          .tt-t { background:color-mix(in srgb,var(--teal) 15%,transparent); color:var(--teal); }
+          .tt-g-text { color:var(--green); }
+          .tt-t-text { color:var(--teal); }
         `}</style>
       </div>
     </>

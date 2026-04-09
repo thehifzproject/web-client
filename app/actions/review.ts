@@ -2,8 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { getSurahText, getSurahAudio, getChapterWords } from '@/lib/quran/cache'
-import { gradeWordCard, gradeAyahCard, gradeSurahCard } from '@/lib/cards'
-import { Rating } from '@/lib/fsrs'
+import { gradeWordCard, gradeAyahCard, gradeSurahCard, logReviewActivity } from '@/lib/cards'
 import { CURRICULUM } from '@/lib/curriculum'
 
 export type ReviewCardType =
@@ -51,21 +50,24 @@ export async function getDueReviewCards(): Promise<ReviewCard[]> {
       .select('id,word_key,card_type')
       .eq('user_id', user.id)
       .lte('due', now)
-      .gt('state', 0)
+      .gt('srs_stage', 0)
+
       .order('due', { ascending: true }),
     supabase
       .from('ayah_cards')
       .select('id,surah_number,ayah_number,card_type')
       .eq('user_id', user.id)
       .lte('due', now)
-      .gt('state', 0)
+      .gt('srs_stage', 0)
+
       .order('due', { ascending: true }),
     supabase
       .from('surah_cards')
       .select('id,surah_number')
       .eq('user_id', user.id)
       .lte('due', now)
-      .gt('state', 0)
+      .gt('srs_stage', 0)
+
       .order('due', { ascending: true }),
   ])
 
@@ -254,13 +256,21 @@ export async function submitReview(
   } = await supabase.auth.getUser()
   if (!user) return
 
-  const rating = correct ? Rating.Good : Rating.Again
+  const cardTableMap: Record<string, 'word_cards' | 'ayah_cards' | 'surah_cards'> = {
+    word_transliteration: 'word_cards',
+    word_meaning: 'word_cards',
+    ayah_identify: 'ayah_cards',
+    ayah_recite: 'ayah_cards',
+    surah_chain: 'surah_cards',
+  }
 
   if (cardType === 'word_transliteration' || cardType === 'word_meaning') {
-    await gradeWordCard(user.id, cardId, rating)
+    await gradeWordCard(user.id, cardId, correct)
   } else if (cardType === 'ayah_identify' || cardType === 'ayah_recite') {
-    await gradeAyahCard(user.id, cardId, rating)
+    await gradeAyahCard(user.id, cardId, correct)
   } else if (cardType === 'surah_chain') {
-    await gradeSurahCard(user.id, cardId, rating)
+    await gradeSurahCard(user.id, cardId, correct)
   }
+
+  await logReviewActivity(user.id, cardTableMap[cardType], cardId, correct)
 }

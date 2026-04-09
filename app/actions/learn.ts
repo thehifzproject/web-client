@@ -9,6 +9,7 @@ import {
   getQueuedWordKeys,
   getQueuedAyahNumbers,
   isSurahQueued,
+  logReviewActivityBatch,
 } from '@/lib/cards'
 import { CURRICULUM } from '@/lib/curriculum'
 
@@ -306,6 +307,14 @@ export async function graduateWords(surahNumber: number, newWordKeys: string[]):
 
   // Add word cards only — the ayah card is created by graduateAyahs
   await Promise.all(newWordKeys.map(key => addWordToQueue(user.id, key)))
+
+  // Log learning activity for the calendar
+  if (newWordKeys.length > 0) {
+    await logReviewActivityBatch(
+      user.id,
+      newWordKeys.map(key => ({ cardTable: 'word_cards' as const, cardId: null, correct: true })),
+    )
+  }
 }
 
 export async function graduateAyahs(surahNumber: number, newAyahNumbers: number[]): Promise<void> {
@@ -316,6 +325,14 @@ export async function graduateAyahs(surahNumber: number, newAyahNumbers: number[
   if (!user) return
 
   await Promise.all(newAyahNumbers.map(n => addAyahToQueue(user.id, surahNumber, n)))
+
+  // Log learning activity for the calendar
+  if (newAyahNumbers.length > 0) {
+    await logReviewActivityBatch(
+      user.id,
+      newAyahNumbers.map(() => ({ cardTable: 'ayah_cards' as const, cardId: null, correct: true })),
+    )
+  }
 
   // Check if all ayahs of this surah are now queued → unlock surah card
   const entry = CURRICULUM.find(e => e.surahNumber === surahNumber)
@@ -335,4 +352,10 @@ export async function graduateSurah(surahNumber: number): Promise<void> {
   if (!user) return
 
   await addSurahToQueue(user.id, surahNumber)
+
+  // Log learning activity for the calendar
+  await logReviewActivityBatch(
+    user.id,
+    [{ cardTable: 'surah_cards' as const, cardId: null, correct: true }],
+  )
 }

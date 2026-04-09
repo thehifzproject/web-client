@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { getChapterWords } from '@/lib/quran/cache'
-import { preloadedCard, cardToRow } from '@/lib/fsrs'
+import { preloadedCardRow } from '@/lib/srs'
 import { ALL_SURAHS, CURRICULUM } from '@/lib/curriculum'
 import { redirect } from 'next/navigation'
 
@@ -32,8 +32,7 @@ export async function completeOnboarding(
 
   // For each known surah, preload all cards with ~1 year stability (batched)
   if (sanitized.length > 0) {
-    const card = preloadedCard(365)
-    const base = cardToRow(card)
+    const base = preloadedCardRow()
 
     // Fetch all chapter data in parallel batches
     const versesMap = new Map<number, Awaited<ReturnType<typeof getChapterWords>>>()

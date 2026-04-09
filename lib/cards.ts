@@ -1,6 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { graduatedCard, preloadedCard, gradeCard, rowToCard, cardToRow, State } from '@/lib/fsrs'
-import type { Grade } from '@/lib/fsrs'
+import { graduatedCardRow, preloadedCardRow, gradeCardRow, stageToTier } from '@/lib/srs'
 
 // ─── Word Cards ───────────────────────────────────────────────────────────────
 
@@ -10,22 +9,21 @@ export async function getWordQueueStatus(userId: string, wordKey: string): Promi
   const supabase = await createClient()
   const { data } = await supabase
     .from('word_cards')
-    .select('state')
+    .select('srs_stage')
     .eq('user_id', userId)
     .eq('word_key', wordKey)
     .eq('card_type', 'transliteration')
     .single()
 
   if (!data) return null
-  if (data.state === State.New) return 'new'
-  if (data.state === State.Learning || data.state === State.Relearning) return 'learning'
+  if (data.srs_stage === 0) return 'new'
+  if (data.srs_stage <= 4) return 'learning'
   return 'review'
 }
 
 export async function addWordToQueue(userId: string, wordKey: string): Promise<void> {
   const supabase = await createClient()
-  const card = graduatedCard()
-  const base = cardToRow(card)
+  const base = graduatedCardRow()
 
   await supabase.from('word_cards').upsert(
     ['transliteration', 'meaning'].map(cardType => ({
@@ -38,14 +36,9 @@ export async function addWordToQueue(userId: string, wordKey: string): Promise<v
   )
 }
 
-export async function addWordToQueuePreloaded(
-  userId: string,
-  wordKey: string,
-  stabilityDays = 365
-): Promise<void> {
+export async function addWordToQueuePreloaded(userId: string, wordKey: string): Promise<void> {
   const supabase = await createClient()
-  const card = preloadedCard(stabilityDays)
-  const base = cardToRow(card)
+  const base = preloadedCardRow()
 
   await supabase.from('word_cards').upsert(
     ['transliteration', 'meaning'].map(cardType => ({
@@ -77,8 +70,7 @@ export async function addAyahToQueue(
   ayahNumber: number
 ): Promise<void> {
   const supabase = await createClient()
-  const card = graduatedCard()
-  const base = cardToRow(card)
+  const base = graduatedCardRow()
 
   await supabase.from('ayah_cards').upsert(
     ['identify', 'recite'].map(cardType => ({
@@ -96,11 +88,9 @@ export async function addAyahToQueuePreloaded(
   userId: string,
   surahNumber: number,
   ayahNumber: number,
-  stabilityDays = 365
 ): Promise<void> {
   const supabase = await createClient()
-  const card = preloadedCard(stabilityDays)
-  const base = cardToRow(card)
+  const base = preloadedCardRow()
 
   await supabase.from('ayah_cards').upsert(
     ['identify', 'recite'].map(cardType => ({
@@ -133,8 +123,7 @@ export async function getQueuedAyahNumbers(
 
 export async function addSurahToQueue(userId: string, surahNumber: number): Promise<void> {
   const supabase = await createClient()
-  const card = graduatedCard()
-  const base = cardToRow(card)
+  const base = graduatedCardRow()
 
   await supabase.from('surah_cards').upsert(
     { user_id: userId, surah_number: surahNumber, ...base },
@@ -142,14 +131,9 @@ export async function addSurahToQueue(userId: string, surahNumber: number): Prom
   )
 }
 
-export async function addSurahToQueuePreloaded(
-  userId: string,
-  surahNumber: number,
-  stabilityDays = 365
-): Promise<void> {
+export async function addSurahToQueuePreloaded(userId: string, surahNumber: number): Promise<void> {
   const supabase = await createClient()
-  const card = preloadedCard(stabilityDays)
-  const base = cardToRow(card)
+  const base = preloadedCardRow()
 
   await supabase.from('surah_cards').upsert(
     { user_id: userId, surah_number: surahNumber, ...base },
@@ -168,52 +152,87 @@ export async function isSurahQueued(userId: string, surahNumber: number): Promis
   return !!data
 }
 
-// ─── Review / FSRS ────────────────────────────────────────────────────────────
+// ─── Review / SRS Grading ────────────────────────────────────────────────────
 
-export async function gradeWordCard(
-  userId: string,
-  cardId: string,
-  rating: Grade
-): Promise<void> {
+export async function gradeWordCard(userId: string, cardId: string, correct: boolean): Promise<void> {
   const supabase = await createClient()
   const { data } = await supabase
     .from('word_cards')
-    .select('due,stability,difficulty,elapsed_days,scheduled_days,learning_steps,reps,lapses,state,last_review')
+    .select('srs_stage')
     .eq('id', cardId)
     .eq('user_id', userId)
     .single()
   if (!data) return
 
-  const next = gradeCard(rowToCard(data), rating)
-  await supabase.from('word_cards').update(cardToRow(next)).eq('id', cardId).eq('user_id', userId)
+  const next = gradeCardRow(data.srs_stage, correct)
+  await supabase.from('word_cards')
+    .update({ ...next, last_review: new Date().toISOString() })
+    .eq('id', cardId).eq('user_id', userId)
 }
 
-export async function gradeAyahCard(userId: string, cardId: string, rating: Grade): Promise<void> {
+export async function gradeAyahCard(userId: string, cardId: string, correct: boolean): Promise<void> {
   const supabase = await createClient()
   const { data } = await supabase
     .from('ayah_cards')
-    .select('due,stability,difficulty,elapsed_days,scheduled_days,learning_steps,reps,lapses,state,last_review')
+    .select('srs_stage')
     .eq('id', cardId)
     .eq('user_id', userId)
     .single()
   if (!data) return
 
-  const next = gradeCard(rowToCard(data), rating)
-  await supabase.from('ayah_cards').update(cardToRow(next)).eq('id', cardId).eq('user_id', userId)
+  const next = gradeCardRow(data.srs_stage, correct)
+  await supabase.from('ayah_cards')
+    .update({ ...next, last_review: new Date().toISOString() })
+    .eq('id', cardId).eq('user_id', userId)
 }
 
-export async function gradeSurahCard(userId: string, cardId: string, rating: Grade): Promise<void> {
+export async function gradeSurahCard(userId: string, cardId: string, correct: boolean): Promise<void> {
   const supabase = await createClient()
   const { data } = await supabase
     .from('surah_cards')
-    .select('due,stability,difficulty,elapsed_days,scheduled_days,learning_steps,reps,lapses,state,last_review')
+    .select('srs_stage')
     .eq('id', cardId)
     .eq('user_id', userId)
     .single()
   if (!data) return
 
-  const next = gradeCard(rowToCard(data), rating)
-  await supabase.from('surah_cards').update(cardToRow(next)).eq('id', cardId).eq('user_id', userId)
+  const next = gradeCardRow(data.srs_stage, correct)
+  await supabase.from('surah_cards')
+    .update({ ...next, last_review: new Date().toISOString() })
+    .eq('id', cardId).eq('user_id', userId)
+}
+
+// ─── Review Log ──────────────────────────────────────────────────────────────
+
+export async function logReviewActivity(
+  userId: string,
+  cardTable: 'word_cards' | 'ayah_cards' | 'surah_cards',
+  cardId: string | null,
+  correct: boolean,
+): Promise<void> {
+  const supabase = await createClient()
+  await supabase.from('review_log').insert({
+    user_id: userId,
+    card_table: cardTable,
+    card_id: cardId,
+    correct,
+  })
+}
+
+export async function logReviewActivityBatch(
+  userId: string,
+  entries: { cardTable: 'word_cards' | 'ayah_cards' | 'surah_cards'; cardId: string | null; correct: boolean }[],
+): Promise<void> {
+  if (entries.length === 0) return
+  const supabase = await createClient()
+  await supabase.from('review_log').insert(
+    entries.map(e => ({
+      user_id: userId,
+      card_table: e.cardTable,
+      card_id: e.cardId,
+      correct: e.correct,
+    }))
+  )
 }
 
 // ─── Review Schedule ──────────────────────────────────────────────────────────
@@ -231,20 +250,18 @@ export interface ReviewSchedule {
   dueToday: number
 }
 
-function utcDateStr(d: Date): string {
-  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`
+function localDateStr(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
 export async function getReviewSchedule(userId: string): Promise<ReviewSchedule> {
   const supabase = await createClient()
 
-  const [words, ayahs, surahs, wordsPast, ayahsPast, surahsPast] = await Promise.all([
-    supabase.from('word_cards').select('due').eq('user_id', userId).gt('state', 0),
-    supabase.from('ayah_cards').select('due').eq('user_id', userId).gt('state', 0),
-    supabase.from('surah_cards').select('due').eq('user_id', userId).gt('state', 0),
-    supabase.from('word_cards').select('last_review').eq('user_id', userId).not('last_review', 'is', null),
-    supabase.from('ayah_cards').select('last_review').eq('user_id', userId).not('last_review', 'is', null),
-    supabase.from('surah_cards').select('last_review').eq('user_id', userId).not('last_review', 'is', null),
+  const [words, ayahs, surahs, logRows] = await Promise.all([
+    supabase.from('word_cards').select('due').eq('user_id', userId).gt('srs_stage', 0),
+    supabase.from('ayah_cards').select('due').eq('user_id', userId).gt('srs_stage', 0),
+    supabase.from('surah_cards').select('due').eq('user_id', userId).gt('srs_stage', 0),
+    supabase.from('review_log').select('created_at').eq('user_id', userId),
   ])
 
   const allDues = [
@@ -253,44 +270,56 @@ export async function getReviewSchedule(userId: string): Promise<ReviewSchedule>
     ...(surahs.data ?? []).map(r => new Date(r.due)),
   ]
 
-  // Past activity: count cards by last_review date
+  // Past activity from review_log (append-only, accurate history)
   const pastByDate: Record<string, number> = {}
-  for (const row of [...(wordsPast.data ?? []), ...(ayahsPast.data ?? []), ...(surahsPast.data ?? [])]) {
-    if (!row.last_review) continue
-    const ds = utcDateStr(new Date(row.last_review))
+  const pastHoursByDate: Record<string, Map<number, number>> = {}
+  for (const row of logRows.data ?? []) {
+    const d = new Date(row.created_at)
+    const ds = localDateStr(d)
     pastByDate[ds] = (pastByDate[ds] ?? 0) + 1
+    if (!pastHoursByDate[ds]) pastHoursByDate[ds] = new Map()
+    const h = d.getHours()
+    pastHoursByDate[ds].set(h, (pastHoursByDate[ds].get(h) ?? 0) + 1)
   }
 
   const now = new Date()
   const DAY_MS = 24 * 60 * 60 * 1000
-  const todayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
-  const todayStr = utcDateStr(todayUTC)
+  const todayLocal = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const todayStr = localDateStr(todayLocal)
 
   // Overdue: due before today
-  const overdueCount = allDues.filter(d => d < todayUTC).length
+  const overdueCount = allDues.filter(d => d < todayLocal).length
 
-  // Today total (overdue + today)
-  const todayEnd = new Date(todayUTC.getTime() + DAY_MS)
-  const dueToday = allDues.filter(d => d < todayEnd).length
+  // Cards actually due right now (due <= now)
+  const dueToday = allDues.filter(d => d <= now).length
 
   // Future by-date map (today onwards)
   const byDate: Record<string, number> = {}
   for (const d of allDues) {
-    const ds = utcDateStr(d)
+    const ds = localDateStr(d)
     if (ds >= todayStr) {
       byDate[ds] = (byDate[ds] ?? 0) + 1
     }
   }
 
-  // Hourly breakdown for all future dates (today onwards)
+  // Hourly breakdown: merge future (from due dates) and past (from review_log)
   const hoursByDate: Record<string, Map<number, number>> = {}
+
+  // Future hours from due dates
   for (const d of allDues) {
-    const ds = utcDateStr(d)
+    const ds = localDateStr(d)
     if (ds < todayStr) continue
     if (!hoursByDate[ds]) hoursByDate[ds] = new Map()
-    const h = d.getUTCHours()
+    const h = d.getHours()
     hoursByDate[ds].set(h, (hoursByDate[ds].get(h) ?? 0) + 1)
   }
+
+  // Past hours from review_log (past dates only — today uses due dates above)
+  for (const [ds, hmap] of Object.entries(pastHoursByDate)) {
+    if (ds >= todayStr) continue
+    hoursByDate[ds] = hmap
+  }
+
   const hoursByDateSorted: Record<string, { hour: number; count: number }[]> = {}
   for (const [ds, hmap] of Object.entries(hoursByDate)) {
     hoursByDateSorted[ds] = [...hmap.entries()].sort(([a], [b]) => a - b).map(([hour, count]) => ({ hour, count }))
@@ -311,19 +340,22 @@ export async function getDueCount(userId: string): Promise<number> {
       .select('id', { count: 'exact', head: true })
       .eq('user_id', userId)
       .lte('due', now)
-      .gt('state', 0),
+      .gt('srs_stage', 0)
+      .lt('srs_stage', 9),
     supabase
       .from('ayah_cards')
       .select('id', { count: 'exact', head: true })
       .eq('user_id', userId)
       .lte('due', now)
-      .gt('state', 0),
+      .gt('srs_stage', 0)
+      .lt('srs_stage', 9),
     supabase
       .from('surah_cards')
       .select('id', { count: 'exact', head: true })
       .eq('user_id', userId)
       .lte('due', now)
-      .gt('state', 0),
+      .gt('srs_stage', 0)
+      .lt('srs_stage', 9),
   ])
 
   return (w.count ?? 0) + (a.count ?? 0) + (s.count ?? 0)
@@ -340,15 +372,6 @@ export interface TierCounts {
   Preserved: number
 }
 
-function stabilityToTier(state: number, stability: number): keyof TierCounts {
-  if (state === State.New) return 'Stranger'
-  if (state === State.Learning || state === State.Relearning) return 'Familiar'
-  if (stability < 7) return 'Known'
-  if (stability < 21) return 'Memorized'
-  if (stability < 90) return 'Mastered'
-  return 'Preserved'
-}
-
 export async function getTierCounts(userId: string): Promise<TierCounts> {
   const supabase = await createClient()
   const counts: TierCounts = {
@@ -356,13 +379,13 @@ export async function getTierCounts(userId: string): Promise<TierCounts> {
   }
 
   const [words, ayahs, surahs] = await Promise.all([
-    supabase.from('word_cards').select('state,stability').eq('user_id', userId),
-    supabase.from('ayah_cards').select('state,stability').eq('user_id', userId),
-    supabase.from('surah_cards').select('state,stability').eq('user_id', userId),
+    supabase.from('word_cards').select('srs_stage').eq('user_id', userId),
+    supabase.from('ayah_cards').select('srs_stage').eq('user_id', userId),
+    supabase.from('surah_cards').select('srs_stage').eq('user_id', userId),
   ])
 
   for (const row of [...(words.data ?? []), ...(ayahs.data ?? []), ...(surahs.data ?? [])]) {
-    counts[stabilityToTier(row.state, row.stability)]++
+    counts[stageToTier(row.srs_stage) as keyof TierCounts]++
   }
 
   return counts
