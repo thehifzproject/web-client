@@ -8,7 +8,8 @@ import { redirect } from 'next/navigation'
 
 export async function completeOnboarding(
   knownSurahNumbers: number[],
-  knowsFatihah: boolean
+  knowsFatihah: boolean,
+  dailyNewWords?: number,
 ): Promise<{ error?: string }> {
   const supabase = await createClient()
   const {
@@ -113,6 +114,15 @@ export async function completeOnboarding(
   await supabase
     .from('user_curriculum_progress')
     .upsert({ user_id: user.id, curriculum_index: startIndex }, { onConflict: 'user_id' })
+
+  // Save daily words preference if provided
+  if (dailyNewWords != null) {
+    const words = Math.max(1, Math.min(100, Math.round(dailyNewWords)))
+    await supabase
+      .from('preferences')
+      .update({ daily_new_words: words })
+      .eq('user_id', user.id)
+  }
 
   // Mark onboarding complete
   await supabase

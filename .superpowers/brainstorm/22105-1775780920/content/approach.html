@@ -1,0 +1,109 @@
+<h2>Landing Page — Two Directions</h2>
+<p class="subtitle">Same content, different structure. Which flow feels right?</p>
+
+<div class="cards">
+
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-body">
+      <h3>A: Story Scroll</h3>
+      <p style="margin-bottom:1rem;">One continuous scroll that tells a story — hooks with the problem, reveals the solution, shows how it works, ends with CTA.</p>
+      <div style="background:#1a1f2e;border-radius:12px;padding:1.5rem;font-size:0.8rem;color:#7a8899;line-height:1.8;">
+        <div style="text-align:center;margin-bottom:1.5rem;">
+          <span style="font-size:1.8rem;">🔲</span><br>
+          <span style="font-family:serif;font-size:1.1rem;color:#e8edf5;">The Hifz Project</span>
+        </div>
+        <div style="text-align:center;color:#e8edf5;font-family:serif;font-size:1.2rem;margin-bottom:0.5rem;">
+          "Memorizing the Quran has been<br>too hard for too long."
+        </div>
+        <div style="text-align:center;font-size:0.75rem;margin-bottom:2rem;">
+          No tutor. No school. No fees.<br>Just you, your phone, and a system that works.
+        </div>
+        <div style="border-top:1px solid #2a3145;padding-top:1rem;margin-bottom:1rem;">
+          <strong style="color:#e8edf5;">↓ How it works</strong><br>
+          1. Learn words → 2. Build ayahs → 3. Chain surahs<br>
+          <span style="font-size:0.7rem;">(with animated demo of each step)</span>
+        </div>
+        <div style="border-top:1px solid #2a3145;padding-top:1rem;margin-bottom:1rem;">
+          <strong style="color:#e8edf5;">↓ Spaced repetition</strong><br>
+          "Science meets tradition" — visual of SRS stages<br>
+          Stranger → Familiar → Known → Memorized → Mastered → Preserved
+        </div>
+        <div style="border-top:1px solid #2a3145;padding-top:1rem;margin-bottom:1rem;">
+          <strong style="color:#e8edf5;">↓ Free. Open source. Forever.</strong><br>
+          Built for the ummah. No ads, no paywalls.
+        </div>
+        <div style="text-align:center;padding:1rem;background:#0d7377;border-radius:8px;color:white;font-weight:600;">
+          Start memorizing →
+        </div>
+      </div>
+
+      <div class="pros-cons" style="margin-top:1rem;">
+        <div class="pros"><h4>Pros</h4><ul>
+          <li>Emotional narrative arc</li>
+          <li>Easy to build incrementally</li>
+          <li>Works great on mobile</li>
+        </ul></div>
+        <div class="cons"><h4>Cons</h4><ul>
+          <li>Long page, user must scroll</li>
+          <li>No navigation anchors</li>
+        </ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-body">
+      <h3>B: Hero + Sections</h3>
+      <p style="margin-bottom:1rem;">Big hero with hook + CTA up front, then distinct sections below with a sticky nav. More traditional landing page.</p>
+      <div style="background:#1a1f2e;border-radius:12px;padding:1.5rem;font-size:0.8rem;color:#7a8899;line-height:1.8;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;font-size:0.75rem;">
+          <span style="color:#e8edf5;">🔲 The Hifz Project</span>
+          <span>How it works &nbsp; About &nbsp; <span style="background:#0d7377;color:white;padding:3px 10px;border-radius:6px;">Get started</span></span>
+        </div>
+        <div style="text-align:center;padding:2rem 0;margin-bottom:1.5rem;">
+          <div style="color:#e8edf5;font-family:serif;font-size:1.3rem;margin-bottom:0.5rem;">
+            Memorize the Quran.<br>Word by word.
+          </div>
+          <div style="font-size:0.75rem;margin-bottom:1rem;">
+            Free, open-source spaced repetition<br>designed for hifz.
+          </div>
+          <div style="display:inline-block;padding:0.5rem 1.5rem;background:#0d7377;border-radius:8px;color:white;font-weight:600;font-size:0.8rem;">
+            Start for free →
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.75rem;margin-bottom:1rem;">
+          <div style="background:#2a3145;border-radius:8px;padding:0.75rem;text-align:center;">
+            <div style="font-size:1.1rem;color:#e8edf5;font-weight:700;">14,870</div>
+            <div style="font-size:0.65rem;">unique words</div>
+          </div>
+          <div style="background:#2a3145;border-radius:8px;padding:0.75rem;text-align:center;">
+            <div style="font-size:1.1rem;color:#e8edf5;font-weight:700;">6,236</div>
+            <div style="font-size:0.65rem;">ayahs</div>
+          </div>
+          <div style="background:#2a3145;border-radius:8px;padding:0.75rem;text-align:center;">
+            <div style="font-size:1.1rem;color:#e8edf5;font-weight:700;">114</div>
+            <div style="font-size:0.65rem;">surahs</div>
+          </div>
+        </div>
+        <div style="border-top:1px solid #2a3145;padding-top:1rem;font-size:0.7rem;">
+          <strong style="color:#e8edf5;">Sections below:</strong> How it works · The science · Curriculum · Free & open source · Get started
+        </div>
+      </div>
+
+      <div class="pros-cons" style="margin-top:1rem;">
+        <div class="pros"><h4>Pros</h4><ul>
+          <li>CTA visible immediately</li>
+          <li>Nav lets users jump to sections</li>
+          <li>Professional/polished feel</li>
+        </ul></div>
+        <div class="cons"><h4>Cons</h4><ul>
+          <li>Less emotional narrative</li>
+          <li>More "startup" than "community"</li>
+        </ul></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<p class="subtitle" style="margin-top:1.5rem;">Both would include: the khatim pattern background, animated logo, hand-drawn warmth, Quranic quotes, and the same core sections. The difference is structure and pacing.</p>

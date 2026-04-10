@@ -138,6 +138,12 @@ export function getCurriculumIndex(surahNumber: number): number {
   return CURRICULUM.findIndex(e => e.surahNumber === surahNumber)
 }
 
+/** Conservative average — used for user-facing estimates on dashboard */
+export const AVG_WORDS_PER_AYAH = 10
+
+/** Approximate number of unique (distinct) words in the Quran */
+export const TOTAL_UNIQUE_WORDS = 14870
+
 export function getPhaseLabel(phase: 1 | 2 | 3 | 4): string {
   const labels: Record<number, string> = {
     1: 'Juz 30 — Foundation',

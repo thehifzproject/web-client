@@ -10,10 +10,11 @@ import {
   getQueuedAyahNumbers,
   isSurahQueued,
   logReviewActivityBatch,
+  getDailyLearningStatus,
 } from '@/lib/cards'
 import { CURRICULUM } from '@/lib/curriculum'
 
-export type SessionType = 'words' | 'ayahs' | 'surah' | 'complete'
+export type SessionType = 'words' | 'ayahs' | 'surah' | 'complete' | 'daily_limit'
 
 export interface WordItem {
   wordKey: string
@@ -105,6 +106,9 @@ export async function getLearnSessionData(): Promise<LearnSessionData | null> {
     getQueuedAyahNumbers(user.id, effectiveSurahNumber),
   ])
 
+  // ── Check daily limits ───────────────────────────────────────────────────
+  const daily = await getDailyLearningStatus(user.id)
+
   // ── Process one ayah at a time ───────────────────────────────────────────
   for (const verse of verses) {
     // Skip ayahs whose card is already in the queue
@@ -114,6 +118,17 @@ export async function getLearnSessionData(): Promise<LearnSessionData | null> {
     const allWordsQueued = ayahWordKeys.every((k: string) => queuedWords.has(k))
 
     if (!allWordsQueued) {
+      // Check daily word limit before teaching new words
+      if (daily.wordsAvailable <= 0) {
+        return {
+          type: 'daily_limit',
+          surahNumber: effectiveSurahNumber,
+          surahName: effectiveSurahName,
+          surahEnglishName: effectiveSurahEnglishName,
+          curriculumIndex,
+          totalSurahs: CURRICULUM.length,
+        }
+      }
       // Teach the words for this single ayah first
       return buildWordsSession(
         user.id,

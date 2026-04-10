@@ -51,7 +51,7 @@ export default function LoginPage() {
 
       <div className="auth-card animate-fade-in">
         <div className="auth-logo">
-          <span className="auth-logo-mark">◈</span>
+          <img src="/logo-dark.gif" alt="" className="logo-icon" width={24} height={24} />
           <span className="auth-logo-name">The Hifz Project</span>
         </div>
 

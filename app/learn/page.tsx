@@ -270,6 +270,7 @@ export default function LearnPage() {
 
   if (loading) return <LoadingScreen />
   if (!session || session.type === 'complete') return <AllDoneScreen />
+  if (session.type === 'daily_limit') return <DailyLimitScreen />
   if (sessionDone) return <SessionCompleteScreen session={session} onContinue={() => {
     setLoading(true)
     getLearnSessionData().then(d => {
@@ -647,6 +648,26 @@ function AllDoneScreen() {
       <Link href="/dashboard" style={{ background: 'var(--teal)', color: '#fff', padding: '0.875rem 2rem', borderRadius: '0.6rem', textDecoration: 'none', fontWeight: 600, fontSize: '1rem' }}>
         Back to Dashboard
       </Link>
+    </div>
+  )
+}
+
+function DailyLimitScreen() {
+  return (
+    <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1.5rem', background: 'var(--bg-base)', padding: '2rem' }}>
+      <Clock size={52} style={{ color: 'var(--gold)' }} />
+      <h2 style={{ fontFamily: 'var(--font-crimson),serif', fontSize: '1.9rem', color: 'var(--text)', margin: 0 }}>Daily limit reached</h2>
+      <p style={{ color: 'var(--text-muted)', textAlign: 'center', fontSize: '1rem', maxWidth: '24rem' }}>
+        You&apos;ve learned all your new items for today. Come back tomorrow for more, or review your due cards now.
+      </p>
+      <div style={{ display: 'flex', gap: '0.75rem' }}>
+        <Link href="/review" style={{ background: 'var(--teal)', color: '#fff', padding: '0.875rem 2rem', borderRadius: '0.6rem', textDecoration: 'none', fontWeight: 600, fontSize: '1rem' }}>
+          Review Cards
+        </Link>
+        <Link href="/dashboard" style={{ background: 'var(--bg-card)', color: 'var(--text)', border: '1px solid var(--border)', padding: '0.875rem 2rem', borderRadius: '0.6rem', textDecoration: 'none', fontWeight: 600, fontSize: '1rem' }}>
+          Dashboard
+        </Link>
+      </div>
     </div>
   )
 }

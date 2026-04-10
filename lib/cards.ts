@@ -340,25 +340,56 @@ export async function getDueCount(userId: string): Promise<number> {
       .select('id', { count: 'exact', head: true })
       .eq('user_id', userId)
       .lte('due', now)
-      .gt('srs_stage', 0)
-      .lt('srs_stage', 9),
+      .gt('srs_stage', 0),
     supabase
       .from('ayah_cards')
       .select('id', { count: 'exact', head: true })
       .eq('user_id', userId)
       .lte('due', now)
-      .gt('srs_stage', 0)
-      .lt('srs_stage', 9),
+      .gt('srs_stage', 0),
     supabase
       .from('surah_cards')
       .select('id', { count: 'exact', head: true })
       .eq('user_id', userId)
       .lte('due', now)
-      .gt('srs_stage', 0)
-      .lt('srs_stage', 9),
+      .gt('srs_stage', 0),
   ])
 
   return (w.count ?? 0) + (a.count ?? 0) + (s.count ?? 0)
+}
+
+// ─── Daily Learning Status ───────────────────────────────────────────────────
+
+export interface DailyLearningStatus {
+  newWordsToday: number
+  dailyNewWords: number
+  wordsAvailable: number
+}
+
+export async function getDailyLearningStatus(userId: string): Promise<DailyLearningStatus> {
+  const supabase = await createClient()
+  const now = new Date()
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString()
+
+  const [prefs, wordsToday] = await Promise.all([
+    supabase.from('preferences').select('daily_new_words').eq('user_id', userId).single(),
+    supabase
+      .from('word_cards')
+      .select('word_key', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('card_type', 'transliteration')
+      .gte('created_at', todayStart)
+      .lt('srs_stage', 9), // exclude preloaded
+  ])
+
+  const dailyNewWords = prefs.data?.daily_new_words ?? 10
+  const newWordsToday = wordsToday.count ?? 0
+
+  return {
+    newWordsToday,
+    dailyNewWords,
+    wordsAvailable: Math.max(0, dailyNewWords - newWordsToday),
+  }
 }
 
 // ─── SRS Tier Counts ──────────────────────────────────────────────────────────

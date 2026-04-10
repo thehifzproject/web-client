@@ -32,8 +32,8 @@ export async function proxy(request: NextRequest) {
   // These routes must not redirect — callback sets the session, verified is the "close this tab" page
   const isAuthPassthrough = pathname === '/auth/callback' || pathname === '/auth/verified'
 
-  // Not logged in → send to login (except auth routes)
-  if (!user && !isAuthRoute) {
+  // Not logged in → send to login (except auth routes and landing page)
+  if (!user && !isAuthRoute && pathname !== '/') {
     return NextResponse.redirect(new URL('/auth/login', request.url))
   }
 

@@ -1,12 +1,12 @@
 'use client'
 
 import { useState, useTransition, useMemo, useCallback } from 'react'
-import { ALL_SURAHS } from '@/lib/curriculum'
+import { ALL_SURAHS, TOTAL_UNIQUE_WORDS } from '@/lib/curriculum'
 import { completeOnboarding } from '@/app/actions/onboarding'
 import { Loader2, ChevronLeft, ChevronRight, Check } from 'lucide-react'
 
-type Step = 'welcome' | 'fatihah' | 'surahs' | 'processing'
-const STEPS: Step[] = ['welcome', 'fatihah', 'surahs']
+type Step = 'welcome' | 'fatihah' | 'surahs' | 'pace' | 'processing'
+const STEPS: Step[] = ['welcome', 'fatihah', 'surahs', 'pace']
 
 function Ring({ val, max, label }: { val: number; max: number; label: string }) {
   const pct = max ? val / max : 0
@@ -48,7 +48,8 @@ export default function OnboardingPage() {
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [isPending, startTransition] = useTransition()
 
-  const [openJuz, setOpenJuz] = useState<Set<number>>(new Set([29]))
+  const [selectedPace, setSelectedPace] = useState(2) // index into PACE_OPTIONS
+  const [openJuz, setOpenJuz] = useState<Set<number>>(new Set())
   const [surahSearch, setSurahSearch] = useState('')
 
   const surahsByJuz = useMemo(() => {
@@ -101,6 +102,17 @@ export default function OnboardingPage() {
     })
   }, [])
 
+  const PACE_OPTIONS = [
+    { label: 'Speedrun', time: '6 months', wordsPerDay: 80, recommended: false },
+    { label: 'Intensive', time: '1 year', wordsPerDay: 40, recommended: false },
+    { label: 'Steady', time: '2 years', wordsPerDay: 20, recommended: true },
+    { label: 'Comfortable', time: '3 years', wordsPerDay: 15, recommended: true },
+    { label: 'Relaxed', time: '5 years', wordsPerDay: 10, recommended: true },
+  ]
+
+  const pace = PACE_OPTIONS[selectedPace]
+  const computedDailyWords = pace.wordsPerDay
+
   function handleFinish() {
     if (knowsFatihah === null) return
     const knownList = [...selected]
@@ -108,7 +120,7 @@ export default function OnboardingPage() {
 
     startTransition(async () => {
       setStep('processing')
-      await completeOnboarding(knownList, knowsFatihah)
+      await completeOnboarding(knownList, knowsFatihah, computedDailyWords)
     })
   }
 
@@ -117,7 +129,7 @@ export default function OnboardingPage() {
   return (
     <div className="onboarding-wrap">
       <div className="onboarding-logo">
-        <span style={{ color: 'var(--teal)' }}>◈</span>
+        <img src="/logo-dark.gif" alt="" className="logo-icon" width={20} height={20} />
         <span style={{ fontFamily: 'var(--font-crimson)', fontSize: '1.1rem', fontWeight: 600 }}>
           The Hifz Project
         </span>
@@ -125,10 +137,10 @@ export default function OnboardingPage() {
 
       {/* Step indicators */}
       <div className="step-dots">
-        {(['welcome', 'fatihah', 'surahs'] as Step[]).map((s, i) => (
+        {STEPS.map((s, i) => (
           <div
             key={s}
-            className={`step-dot ${step === s ? 'active' : i < ['welcome', 'fatihah', 'surahs'].indexOf(step) ? 'done' : ''}`}
+            className={`step-dot ${step === s ? 'active' : i < STEPS.indexOf(step) ? 'done' : ''}`}
           />
         ))}
       </div>
@@ -254,10 +266,47 @@ export default function OnboardingPage() {
             <span style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
               {selected.size} selected
             </span>
-            <button className="btn-primary" style={{ width: 'auto', paddingLeft: '2rem', paddingRight: '2rem' }} onClick={handleFinish}>
+            <button className="btn-primary" style={{ width: 'auto', paddingLeft: '2rem', paddingRight: '2rem' }} onClick={() => setStep('pace')}>
               Continue
             </button>
           </div>
+        </div>
+      )}
+
+      {/* ── STEP: Pace ── */}
+      {step === 'pace' && !isPending && (
+        <div className="onboarding-card animate-fade-in">
+          <h2 className="onboarding-title">Set Your Pace</h2>
+          <p className="onboarding-body" style={{ color: 'var(--text-muted)' }}>
+            How quickly do you want to finish memorizing the Quran?
+          </p>
+
+          <div className="pace-options">
+            {PACE_OPTIONS.map((opt, i) => (
+              <button
+                key={opt.label}
+                className={`pace-option${selectedPace === i ? ' pace-option-active' : ''}`}
+                onClick={() => setSelectedPace(i)}
+              >
+                <span className="pace-opt-time">{opt.time}</span>
+                <span className="pace-opt-right">
+                  {opt.recommended && <span className="pace-rec">Recommended</span>}
+                  <span className="pace-opt-label">{opt.label}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+
+          <div className="pace-summary">
+            <span className="pace-summary-words">~{computedDailyWords} words/day</span>
+            <span className="pace-summary-hint">
+              Based on ~{TOTAL_UNIQUE_WORDS.toLocaleString()} unique words in the Quran
+            </span>
+          </div>
+
+          <button className="btn-primary" onClick={handleFinish}>
+            Start Learning
+          </button>
         </div>
       )}
 
@@ -348,6 +397,20 @@ export default function OnboardingPage() {
         .ob-chip-done .ob-chip-num { color:var(--teal); }
         .ob-chip-name { font-size:0.82rem; font-weight:500; }
         .ob-chip-done .ob-chip-name { color:var(--teal); }
+
+        /* ── Pace step ── */
+        .pace-options { display:flex; flex-direction:column; gap:0.5rem; margin:1rem 0; }
+        .pace-option { display:flex; align-items:center; justify-content:space-between; padding:0.75rem 1rem; border:1.5px solid var(--border); border-radius:0.65rem; background:var(--bg-base); cursor:pointer; transition:all 0.15s; font-family:inherit; color:var(--text); }
+        .pace-option:hover { border-color:var(--teal); }
+        .pace-option-active { border-color:var(--teal); background:color-mix(in srgb,var(--teal) 8%,transparent); }
+        .pace-opt-time { font-size:0.95rem; font-weight:600; }
+        .pace-option-active .pace-opt-time { color:var(--teal); }
+        .pace-opt-right { display:flex; align-items:center; gap:0.5rem; }
+        .pace-opt-label { font-size:0.8rem; color:var(--text-muted); }
+        .pace-rec { font-size:0.65rem; font-weight:600; text-transform:uppercase; letter-spacing:0.04em; color:var(--green); background:color-mix(in srgb,var(--green) 12%,transparent); padding:0.15rem 0.45rem; border-radius:0.75rem; }
+        .pace-summary { text-align:center; padding:0.75rem 0; }
+        .pace-summary-words { display:block; font-size:1.3rem; font-weight:700; color:var(--teal); }
+        .pace-summary-hint { display:block; font-size:0.75rem; color:var(--text-faint); margin-top:0.25rem; }
 
         @keyframes spin { to { transform:rotate(360deg); } }
         .animate-spin { animation:spin 1s linear infinite; }

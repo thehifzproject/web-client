@@ -2,9 +2,9 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { BookOpen, RefreshCw, Flame, Lock, Settings } from 'lucide-react'
-import { getDueCount, getTierCounts, getQueuedWordKeys, getQueuedAyahNumbers, isSurahQueued, getReviewSchedule } from '@/lib/cards'
+import { getDueCount, getTierCounts, getQueuedWordKeys, getQueuedAyahNumbers, isSurahQueued, getReviewSchedule, getDailyLearningStatus } from '@/lib/cards'
 import { ReviewCalendar } from './review-calendar'
-import { CURRICULUM, getPhaseLabel } from '@/lib/curriculum'
+import { CURRICULUM, getPhaseLabel, AVG_WORDS_PER_AYAH } from '@/lib/curriculum'
 import { getChapterWords } from '@/lib/quran/cache'
 
 const TIER_COLORS: Record<string, string> = {
@@ -28,10 +28,11 @@ export default async function DashboardPage() {
   const curriculumIndex = progress?.curriculum_index ?? 0
   const currentEntry = CURRICULUM[curriculumIndex]
 
-  const [dueCount, tiers, schedule] = await Promise.all([
+  const [dueCount, tiers, schedule, dailyLearn] = await Promise.all([
     getDueCount(user.id),
     getTierCounts(user.id),
     getReviewSchedule(user.id),
+    getDailyLearningStatus(user.id),
   ])
 
   // Resolve effective surah — Fatihah overrides curriculum index 0 if not yet learned
@@ -49,6 +50,7 @@ export default async function DashboardPage() {
   let wordProgress = { queued: 0, total: 0 }
   let ayahProgress = { queued: 0, total: 0 }
   let surahQueued = false
+  let avgWordsPerAyah = AVG_WORDS_PER_AYAH
 
   if (effectiveEntry) {
     const [verses, queuedWords, queuedAyahs, surahQ] = await Promise.all([
@@ -66,8 +68,12 @@ export default async function DashboardPage() {
     wordProgress = { queued: [...allWordKeys].filter(k => queuedWords.has(k)).length, total: allWordKeys.size }
     ayahProgress = { queued: queuedAyahs.size, total: effectiveEntry.ayahCount }
     surahQueued = surahQ
+    avgWordsPerAyah = verses.length > 0
+      ? allWordKeys.size / verses.length
+      : AVG_WORDS_PER_AYAH
   }
 
+  const estimatedAyahs = Math.floor(dailyLearn.wordsAvailable / avgWordsPerAyah)
   const firstName = profile?.display_name?.split(' ')[0] ?? 'there'
   const hour = new Date().getHours()
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
@@ -77,7 +83,7 @@ export default async function DashboardPage() {
     <div className="dash-wrap">
       <nav className="dash-nav">
         <div className="nav-logo">
-          <span style={{ color: 'var(--teal)' }}>◈</span>
+          <img src="/logo-dark.gif" alt="" className="logo-icon" width={20} height={20} />
           <span className="nav-name">The Hifz Project</span>
         </div>
         <div className="nav-right">
@@ -93,7 +99,16 @@ export default async function DashboardPage() {
 
           <div className="action-row">
             <Link href="/learn" className="action-btn action-learn">
-              <BookOpen size={20} /><span>Start Learning</span>
+              <BookOpen size={20} />
+              <div className="action-learn-text">
+                <span>Start Learning</span>
+                {dailyLearn.wordsAvailable > 0 && (
+                  <span className="learn-badge">
+                    {dailyLearn.wordsAvailable} words
+                    {estimatedAyahs >= 1 && ` · ~${estimatedAyahs} ayah${estimatedAyahs > 1 ? 's' : ''}`}
+                  </span>
+                )}
+              </div>
             </Link>
             <Link href="/review" className="action-btn action-review">
               <RefreshCw size={20} />
@@ -194,6 +209,8 @@ export default async function DashboardPage() {
         .action-btn:hover { opacity:0.9; transform:translateY(-1px); }
         .action-learn { background:var(--green); color:#fff; }
         .action-review { background:var(--teal); color:#fff; }
+        .action-learn-text { display:flex; flex-direction:column; gap:0.1rem; }
+        .learn-badge { font-size:0.8rem; font-weight:400; opacity:0.85; }
         .action-review-text { display:flex; flex-direction:column; gap:0.1rem; }
         .due-badge { font-size:0.8rem; font-weight:400; opacity:0.85; }
         .section { display:flex; flex-direction:column; gap:0.75rem; }
