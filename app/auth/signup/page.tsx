@@ -34,7 +34,7 @@ export default function SignupPage() {
     setError('')
 
     const supabase = createClient()
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -46,10 +46,45 @@ export default function SignupPage() {
     if (error) {
       setError(error.message)
       setLoading(false)
-    } else {
-      setEmailSent(true)
-      setLoading(false)
+      return
     }
+
+    // Supabase obfuscates existing users by returning a user with empty identities
+    // instead of an error (to prevent email enumeration attacks).
+    const emailAlreadyExists = data.user && data.user.identities && data.user.identities.length === 0
+
+    if (emailAlreadyExists) {
+      // Try signing them in — if the password matches, they're in
+      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
+      if (!signInError) {
+        router.push('/')
+        router.refresh()
+        return
+      }
+
+      // Unverified existing users — resend the confirmation email and show the email sent page
+      const isUnverified =
+        signInError.code === 'email_not_confirmed' ||
+        /not confirmed/i.test(signInError.message)
+
+      if (isUnverified) {
+        await supabase.auth.resend({
+          type: 'signup',
+          email,
+          options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+        })
+        setEmailSent(true)
+        setLoading(false)
+        return
+      }
+
+      setError('That email is already in use.')
+      setLoading(false)
+      return
+    }
+
+    setEmailSent(true)
+    setLoading(false)
   }
 
   return (
