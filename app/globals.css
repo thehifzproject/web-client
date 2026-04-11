@@ -132,12 +132,12 @@ body {
   border-radius: 3px;
 }
 
-/* ─── Animated Logo Icon ─────────────────────────────────────────────────── */
+/* ─── Logo Icon ──────────────────────────────────────────────────────────── */
 .logo-icon {
   display: inline-block;
   vertical-align: middle;
 }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .logo-icon { filter: brightness(0) invert(1); }
+  :root:not([data-theme="light"]) .logo-icon { filter: invert(1); }
 }
-[data-theme="dark"] .logo-icon { filter: brightness(0) invert(1); }
+[data-theme="dark"] .logo-icon { filter: invert(1); }

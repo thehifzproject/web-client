@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Eye, EyeOff, Loader2 } from 'lucide-react'
+import { ArrowLeft, Eye, EyeOff, Loader2 } from 'lucide-react'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -49,9 +49,14 @@ export default function LoginPage() {
         </svg>
       </div>
 
+      <Link href="/" className="auth-back">
+        <ArrowLeft size={16} />
+        <span>Back to home</span>
+      </Link>
+
       <div className="auth-card animate-fade-in">
         <div className="auth-logo">
-          <img src="/logo-dark.gif" alt="" className="logo-icon" width={24} height={24} />
+          <img src="/logo-black.png" alt="" className="logo-icon" width={24} height={24} />
           <span className="auth-logo-name">The Hifz Project</span>
         </div>
 
@@ -137,6 +142,25 @@ export default function LoginPage() {
           border-radius: 1.25rem;
           padding: 2.5rem 2rem;
           box-shadow: 0 8px 32px rgba(0,0,0,0.08);
+        }
+        .auth-back {
+          position: absolute;
+          top: 1.5rem;
+          left: 1.5rem;
+          z-index: 2;
+          display: inline-flex;
+          align-items: center;
+          gap: 0.4rem;
+          color: var(--text-muted);
+          text-decoration: none;
+          font-size: 0.85rem;
+          padding: 0.5rem 0.75rem;
+          border-radius: 0.5rem;
+          transition: color 0.15s, background 0.15s;
+        }
+        .auth-back:hover {
+          color: var(--text);
+          background: color-mix(in srgb, var(--text) 6%, transparent);
         }
         .auth-logo {
           display: flex;

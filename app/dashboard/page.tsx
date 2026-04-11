@@ -83,7 +83,7 @@ export default async function DashboardPage() {
     <div className="dash-wrap">
       <nav className="dash-nav">
         <div className="nav-logo">
-          <img src="/logo-dark.gif" alt="" className="logo-icon" width={20} height={20} />
+          <img src="/logo-black.png" alt="" className="logo-icon" width={20} height={20} />
           <span className="nav-name">The Hifz Project</span>
         </div>
         <div className="nav-right">

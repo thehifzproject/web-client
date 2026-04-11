@@ -73,7 +73,7 @@ export default function SignupPage() {
       {emailSent ? (
         <div className="auth-card animate-fade-in" style={{ textAlign: 'center' }}>
           <div className="auth-logo">
-            <img src="/logo-dark.gif" alt="" className="logo-icon" width={24} height={24} />
+            <img src="/logo-black.png" alt="" className="logo-icon" width={24} height={24} />
             <span className="auth-logo-name">The Hifz Project</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'center', margin: '0.5rem 0 1.5rem' }}>
@@ -94,7 +94,7 @@ export default function SignupPage() {
 
       <div className="auth-card animate-fade-in">
         <div className="auth-logo">
-          <img src="/logo-dark.gif" alt="" className="logo-icon" width={24} height={24} />
+          <img src="/logo-black.png" alt="" className="logo-icon" width={24} height={24} />
           <span className="auth-logo-name">The Hifz Project</span>
         </div>
 

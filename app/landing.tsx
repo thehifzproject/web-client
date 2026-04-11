@@ -25,7 +25,7 @@ export function LandingPage() {
       {/* Nav */}
       <nav className="lp-nav">
         <div className="lp-nav-left">
-          <img src="/logo-dark.gif" alt="" className="logo-icon" width={22} height={22} />
+          <img src="/logo-black.png" alt="" className="logo-icon" width={22} height={22} />
           <span className="lp-nav-name">The Hifz Project</span>
         </div>
         <div className="lp-nav-right">

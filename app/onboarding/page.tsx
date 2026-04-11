@@ -129,7 +129,7 @@ export default function OnboardingPage() {
   return (
     <div className="onboarding-wrap">
       <div className="onboarding-logo">
-        <img src="/logo-dark.gif" alt="" className="logo-icon" width={20} height={20} />
+        <img src="/logo-black.png" alt="" className="logo-icon" width={20} height={20} />
         <span style={{ fontFamily: 'var(--font-crimson)', fontSize: '1.1rem', fontWeight: 600 }}>
           The Hifz Project
         </span>
