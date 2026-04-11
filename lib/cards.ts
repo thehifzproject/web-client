@@ -237,21 +237,15 @@ export async function logReviewActivityBatch(
 
 // ─── Review Schedule ──────────────────────────────────────────────────────────
 
-export interface ReviewSchedule {
-  /** YYYY-MM-DD → card count (future dates only, UTC) */
-  byDate: Record<string, number>
-  /** YYYY-MM-DD → cards reviewed that day (from last_review field) */
-  pastByDate: Record<string, number>
-  /** YYYY-MM-DD → hourly breakdown for future dates (today onwards) */
-  hoursByDate: Record<string, { hour: number; count: number }[]>
-  /** Cards whose due date is before today (already overdue) */
-  overdueCount: number
-  /** Total cards due today (including overdue treated as today) */
-  dueToday: number
-}
+// Raw timestamps are returned so the client can aggregate using the browser's
+// local timezone. Aggregating server-side would bucket reviews into UTC days,
+// which caused reviews to show up on the "wrong" day for users outside UTC.
 
-function localDateStr(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+export interface ReviewSchedule {
+  /** ISO timestamps: due dates of all active (stage 1–9) cards */
+  dues: string[]
+  /** ISO timestamps: every review_log entry's created_at */
+  pastReviews: string[]
 }
 
 export async function getReviewSchedule(userId: string): Promise<ReviewSchedule> {
@@ -264,68 +258,14 @@ export async function getReviewSchedule(userId: string): Promise<ReviewSchedule>
     supabase.from('review_log').select('created_at').eq('user_id', userId),
   ])
 
-  const allDues = [
-    ...(words.data ?? []).map(r => new Date(r.due)),
-    ...(ayahs.data ?? []).map(r => new Date(r.due)),
-    ...(surahs.data ?? []).map(r => new Date(r.due)),
+  const dues = [
+    ...(words.data ?? []).map(r => r.due as string),
+    ...(ayahs.data ?? []).map(r => r.due as string),
+    ...(surahs.data ?? []).map(r => r.due as string),
   ]
+  const pastReviews = (logRows.data ?? []).map(r => r.created_at as string)
 
-  // Past activity from review_log (append-only, accurate history)
-  const pastByDate: Record<string, number> = {}
-  const pastHoursByDate: Record<string, Map<number, number>> = {}
-  for (const row of logRows.data ?? []) {
-    const d = new Date(row.created_at)
-    const ds = localDateStr(d)
-    pastByDate[ds] = (pastByDate[ds] ?? 0) + 1
-    if (!pastHoursByDate[ds]) pastHoursByDate[ds] = new Map()
-    const h = d.getHours()
-    pastHoursByDate[ds].set(h, (pastHoursByDate[ds].get(h) ?? 0) + 1)
-  }
-
-  const now = new Date()
-  const DAY_MS = 24 * 60 * 60 * 1000
-  const todayLocal = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-  const todayStr = localDateStr(todayLocal)
-
-  // Overdue: due before today
-  const overdueCount = allDues.filter(d => d < todayLocal).length
-
-  // Cards actually due right now (due <= now)
-  const dueToday = allDues.filter(d => d <= now).length
-
-  // Future by-date map (today onwards)
-  const byDate: Record<string, number> = {}
-  for (const d of allDues) {
-    const ds = localDateStr(d)
-    if (ds >= todayStr) {
-      byDate[ds] = (byDate[ds] ?? 0) + 1
-    }
-  }
-
-  // Hourly breakdown: merge future (from due dates) and past (from review_log)
-  const hoursByDate: Record<string, Map<number, number>> = {}
-
-  // Future hours from due dates
-  for (const d of allDues) {
-    const ds = localDateStr(d)
-    if (ds < todayStr) continue
-    if (!hoursByDate[ds]) hoursByDate[ds] = new Map()
-    const h = d.getHours()
-    hoursByDate[ds].set(h, (hoursByDate[ds].get(h) ?? 0) + 1)
-  }
-
-  // Past hours from review_log (past dates only — today uses due dates above)
-  for (const [ds, hmap] of Object.entries(pastHoursByDate)) {
-    if (ds >= todayStr) continue
-    hoursByDate[ds] = hmap
-  }
-
-  const hoursByDateSorted: Record<string, { hour: number; count: number }[]> = {}
-  for (const [ds, hmap] of Object.entries(hoursByDate)) {
-    hoursByDateSorted[ds] = [...hmap.entries()].sort(([a], [b]) => a - b).map(([hour, count]) => ({ hour, count }))
-  }
-
-  return { byDate, pastByDate, hoursByDate: hoursByDateSorted, overdueCount, dueToday }
+  return { dues, pastReviews }
 }
 
 // ─── Due counts ───────────────────────────────────────────────────────────────

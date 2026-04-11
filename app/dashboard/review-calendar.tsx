@@ -1,12 +1,72 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import type { ReviewSchedule } from '@/lib/cards'
 
 const DOW_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 
 function localDateStr(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+// Aggregate raw timestamps into per-day buckets using the browser's local
+// timezone. Kept on the client so users in any tz see "today" as their today.
+interface AggregatedSchedule {
+  byDate: Record<string, number>
+  pastByDate: Record<string, number>
+  hoursByDate: Record<string, { hour: number; count: number }[]>
+  overdueCount: number
+  dueToday: number
+}
+
+function aggregateSchedule(schedule: ReviewSchedule): AggregatedSchedule {
+  const dueDates = schedule.dues.map(s => new Date(s))
+  const pastDates = schedule.pastReviews.map(s => new Date(s))
+
+  const now = new Date()
+  const todayLocal = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const todayStr = localDateStr(todayLocal)
+
+  const overdueCount = dueDates.filter(d => d < todayLocal).length
+  const dueToday = dueDates.filter(d => d <= now).length
+
+  // Future-dated buckets (today and beyond) come from card due dates
+  const byDate: Record<string, number> = {}
+  const hoursMap: Record<string, Map<number, number>> = {}
+  for (const d of dueDates) {
+    const ds = localDateStr(d)
+    if (ds < todayStr) continue
+    byDate[ds] = (byDate[ds] ?? 0) + 1
+    if (!hoursMap[ds]) hoursMap[ds] = new Map()
+    const h = d.getHours()
+    hoursMap[ds].set(h, (hoursMap[ds].get(h) ?? 0) + 1)
+  }
+
+  // Past buckets come from review_log
+  const pastByDate: Record<string, number> = {}
+  const pastHoursMap: Record<string, Map<number, number>> = {}
+  for (const d of pastDates) {
+    const ds = localDateStr(d)
+    pastByDate[ds] = (pastByDate[ds] ?? 0) + 1
+    if (!pastHoursMap[ds]) pastHoursMap[ds] = new Map()
+    const h = d.getHours()
+    pastHoursMap[ds].set(h, (pastHoursMap[ds].get(h) ?? 0) + 1)
+  }
+
+  // Past-day hour breakdowns use review_log only (today is already from dues)
+  for (const [ds, hmap] of Object.entries(pastHoursMap)) {
+    if (ds >= todayStr) continue
+    hoursMap[ds] = hmap
+  }
+
+  const hoursByDate: Record<string, { hour: number; count: number }[]> = {}
+  for (const [ds, hmap] of Object.entries(hoursMap)) {
+    hoursByDate[ds] = [...hmap.entries()]
+      .sort(([a], [b]) => a - b)
+      .map(([hour, count]) => ({ hour, count }))
+  }
+
+  return { byDate, pastByDate, hoursByDate, overdueCount, dueToday }
 }
 
 function fmtHour(h: number) {
@@ -109,7 +169,7 @@ function Tooltip({
   state, schedule,
 }: {
   state: TooltipState
-  schedule: ReviewSchedule
+  schedule: AggregatedSchedule
 }) {
   const { x, y, cellH, dateStr, isPast, isToday, pastCount, futureCount } = state
 
@@ -119,9 +179,11 @@ function Tooltip({
   const rawLeft = x - TT_WIDTH / 2
   const left = Math.max(8, Math.min(rawLeft, (typeof window !== 'undefined' ? window.innerWidth : 1200) - TT_WIDTH - 8))
 
-  const date = new Date(dateStr + 'T00:00:00Z')
-  const dayName = date.toLocaleString('en-US', { weekday: 'short', timeZone: 'UTC' })
-  const dateFmt = date.toLocaleString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
+  // dateStr is YYYY-MM-DD in local tz — construct a local Date to format it
+  const [yy, mm, dd] = dateStr.split('-').map(Number)
+  const date = new Date(yy, mm - 1, dd)
+  const dayName = date.toLocaleString('en-US', { weekday: 'short' })
+  const dateFmt = date.toLocaleString('en-US', { month: 'short', day: 'numeric' })
 
   const hours = schedule.hoursByDate[dateStr] ?? []
   const totalCount = isPast || isToday ? pastCount : futureCount
@@ -210,13 +272,14 @@ function DetailPanel({
   day, schedule,
 }: {
   day: DayInfo
-  schedule: ReviewSchedule
+  schedule: AggregatedSchedule
 }) {
   const { dateStr, isPast, pastCount, futureCount } = day
 
-  const date = new Date(dateStr + 'T00:00:00Z')
-  const dayName = date.toLocaleString('en-US', { weekday: 'long', timeZone: 'UTC' })
-  const dateFmt = date.toLocaleString('en-US', { month: 'long', day: 'numeric', timeZone: 'UTC' })
+  const [yy, mm, dd] = dateStr.split('-').map(Number)
+  const date = new Date(yy, mm - 1, dd)
+  const dayName = date.toLocaleString('en-US', { weekday: 'long' })
+  const dateFmt = date.toLocaleString('en-US', { month: 'long', day: 'numeric' })
 
   const hours = schedule.hoursByDate[dateStr] ?? []
   const totalCount = isPast ? pastCount : futureCount
@@ -297,8 +360,10 @@ export function ReviewCalendar({ schedule }: { schedule: ReviewSchedule }) {
   const [tooltip, setTooltip] = useState<TooltipState | null>(null)
   const [selectedDay, setSelectedDay] = useState<DayInfo | null>(null)
 
-  const { year, monthName, firstDow, days } = buildMonth(schedule.byDate, schedule.pastByDate, offset)
-  const hasAnyData = Object.keys(schedule.byDate).length > 0 || Object.keys(schedule.pastByDate).length > 0
+  const agg = useMemo(() => aggregateSchedule(schedule), [schedule])
+
+  const { year, monthName, firstDow, days } = buildMonth(agg.byDate, agg.pastByDate, offset)
+  const hasAnyData = Object.keys(agg.byDate).length > 0 || Object.keys(agg.pastByDate).length > 0
 
   const handleEnter = useCallback((e: React.MouseEvent<HTMLDivElement>, day: DayInfo) => {
     const rect = e.currentTarget.getBoundingClientRect()
@@ -322,15 +387,15 @@ export function ReviewCalendar({ schedule }: { schedule: ReviewSchedule }) {
 
   return (
     <>
-      {tooltip && <Tooltip state={tooltip} schedule={schedule} />}
+      {tooltip && <Tooltip state={tooltip} schedule={agg} />}
 
       <div className="rcal-card">
         <div className="rcal-top">
           <span className="rcal-title">Activity & Schedule</span>
-          {schedule.dueToday > 0 && (
+          {agg.dueToday > 0 && (
             <div className="rcal-due">
               <span className="rcal-due-dot" />
-              <span className="rcal-due-lbl">{schedule.dueToday} due now</span>
+              <span className="rcal-due-lbl">{agg.dueToday} due now</span>
             </div>
           )}
         </div>
@@ -386,7 +451,7 @@ export function ReviewCalendar({ schedule }: { schedule: ReviewSchedule }) {
           </div>
         </div>
 
-        {selectedDay && <DetailPanel day={selectedDay} schedule={schedule} />}
+        {selectedDay && <DetailPanel day={selectedDay} schedule={agg} />}
 
         {!hasAnyData && (
           <p className="rcal-empty">Start learning to see your activity here.</p>
