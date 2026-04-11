@@ -66,85 +66,68 @@ export function LandingPage() {
             <span className="lp-step-num">Step 1</span>
             <h3 className="lp-step-title">Learn the words</h3>
             <p className="lp-step-desc">
-              Each ayah is broken into individual words. See the Arabic, hear the pronunciation,
-              learn the meaning. One word at a time — no overwhelm.
+              Each ayah is broken into its individual words. See the Arabic, hear the recitation,
+              learn the meaning — then type it back to prove you know it.
             </p>
           </div>
           <div className="lp-demo">
-            <span className="lp-demo-label">Word Card</span>
+            <span className="lp-demo-label">Word 1 of 4</span>
             <div className="lp-demo-arabic">بِسْمِ</div>
-            <div className="lp-demo-row">
-              <div>
-                <span className="lp-demo-tag">Transliteration</span>
-                <span className="lp-demo-val lp-demo-val-teal">bismi</span>
-              </div>
-              <div>
-                <span className="lp-demo-tag">Meaning</span>
-                <span className="lp-demo-val lp-demo-val-gold">In the name of</span>
-              </div>
+            <div className="lp-demo-translit">bismi</div>
+            <div className="lp-demo-meaning">&ldquo;In the name of&rdquo;</div>
+            <div className="lp-demo-audio">
+              <span className="lp-demo-audio-icon">▶</span>
+              <span>Play audio</span>
             </div>
-            <div className="lp-demo-play">▶</div>
-            <span className="lp-demo-hint">← swipe through all words in the ayah →</span>
+            <div className="lp-demo-nav">
+              <span>← Prev</span>
+              <span>Next →</span>
+            </div>
           </div>
         </FadeIn>
 
         <FadeIn className="lp-step lp-step-reverse">
           <div className="lp-step-text">
             <span className="lp-step-num">Step 2</span>
-            <h3 className="lp-step-title">Build the ayahs</h3>
+            <h3 className="lp-step-title">Identify the ayahs</h3>
             <p className="lp-step-desc">
-              Once you know every word, prove you can identify and recite the full ayah.
-              Understanding before memorization — the way it sticks.
+              Once you know the words, prove you can recognize the ayah. Given the Arabic,
+              name the surah and ayah number from memory.
             </p>
           </div>
           <div className="lp-demo">
-            <span className="lp-demo-label">Ayah Test</span>
+            <span className="lp-demo-label">Ayah · Identify</span>
             <div className="lp-demo-arabic" style={{ fontSize: '1.4rem' }}>
               بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ
             </div>
-            <p className="lp-demo-question">Which surah does this ayah belong to?</p>
-            <div className="lp-demo-grid">
-              <div className="lp-demo-opt">Al-Baqarah</div>
-              <div className="lp-demo-opt lp-demo-opt-correct">Al-Fatihah ✓</div>
-              <div className="lp-demo-opt">An-Nas</div>
-              <div className="lp-demo-opt">Al-Ikhlas</div>
+            <p className="lp-demo-question">Which surah is this from? What is the ayah number?</p>
+            <div className="lp-demo-fields">
+              <div className="lp-demo-input lp-demo-input-grow">
+                Al-Fatihah<span className="lp-demo-caret" />
+              </div>
+              <div className="lp-demo-input lp-demo-input-small">1</div>
             </div>
+            <div className="lp-demo-btn">Submit</div>
           </div>
         </FadeIn>
 
         <FadeIn className="lp-step">
           <div className="lp-step-text">
             <span className="lp-step-num">Step 3</span>
-            <h3 className="lp-step-title">Chain the surahs</h3>
+            <h3 className="lp-step-title">Recite from memory</h3>
             <p className="lp-step-desc">
-              When all ayahs are learned, chain them together. Recite sequences from memory.
-              Then the whole surah is yours — move to the next one.
+              The final step — given a surah and ayah reference, type the full transliteration
+              from memory. Once every ayah can be recited, the surah is yours.
             </p>
           </div>
           <div className="lp-demo">
-            <span className="lp-demo-label">Surah Chain</span>
-            <p className="lp-demo-question">What comes after ayah 3?</p>
-            <div className="lp-chain">
-              <div className="lp-chain-row lp-chain-done">
-                <span className="lp-chain-num">2</span>
-                <span>ar-raḥmāni</span>
-                <span className="lp-chain-check">✓</span>
-              </div>
-              <div className="lp-chain-row lp-chain-done">
-                <span className="lp-chain-num">3</span>
-                <span>ar-raḥīmi</span>
-                <span className="lp-chain-check">✓</span>
-              </div>
-              <div className="lp-chain-row lp-chain-active">
-                <span className="lp-chain-num">4</span>
-                <span>māliki yawmi d-dīni</span>
-                <span className="lp-chain-arrow">▸</span>
-              </div>
-              <div className="lp-chain-row lp-chain-locked">
-                <span className="lp-chain-num">5</span>
-                <span>???</span>
-              </div>
+            <span className="lp-demo-label">Surah · Sequence</span>
+            <div className="lp-demo-ref">Al-Fatihah · Ayah 4</div>
+            <p className="lp-demo-question">Type the transliteration of this ayah.</p>
+            <div className="lp-demo-textarea">
+              māliki yawmi d-dīni<span className="lp-demo-caret" />
             </div>
+            <div className="lp-demo-btn">Submit</div>
           </div>
         </FadeIn>
       </section>
@@ -237,7 +220,7 @@ export function LandingPage() {
         </div>
         <FadeIn>
           <a
-            href="https://github.com/justin06lee/thehifzproject.com"
+            href="https://github.com/thehifzproject/web-client"
             target="_blank"
             rel="noopener noreferrer"
             className="lp-gh-btn"
@@ -264,7 +247,7 @@ export function LandingPage() {
       <footer className="lp-footer">
         <span>The Hifz Project — open source</span>
         <div className="lp-footer-links">
-          <a href="https://github.com/justin06lee/thehifzproject.com" target="_blank" rel="noopener noreferrer">GitHub</a>
+          <a href="https://github.com/thehifzproject/web-client" target="_blank" rel="noopener noreferrer">GitHub</a>
         </div>
       </footer>
 
@@ -311,29 +294,23 @@ export function LandingPage() {
 
         /* ── Demo cards ── */
         .lp-demo { flex:1; background:var(--bg-card); border:1px solid var(--border); border-radius:1rem; padding:1.5rem; text-align:center; }
-        .lp-demo-label { font-size:0.7rem; color:var(--text-faint); display:block; margin-bottom:0.75rem; }
-        .lp-demo-arabic { font-family:var(--font-amiri),serif; font-size:2.5rem; color:var(--text); direction:rtl; margin-bottom:0.75rem; line-height:1.4; }
-        .lp-demo-row { display:flex; justify-content:center; gap:2rem; margin-bottom:0.75rem; }
-        .lp-demo-tag { display:block; font-size:0.6rem; color:var(--text-faint); text-transform:uppercase; }
-        .lp-demo-val { font-weight:600; font-size:0.9rem; }
-        .lp-demo-val-teal { color:var(--teal); }
-        .lp-demo-val-gold { color:var(--gold); }
-        .lp-demo-play { width:32px; height:32px; border-radius:50%; background:var(--teal); color:#fff; display:inline-flex; align-items:center; justify-content:center; font-size:0.75rem; margin-bottom:0.5rem; }
-        .lp-demo-hint { font-size:0.65rem; color:var(--text-faint); font-style:italic; display:block; }
-        .lp-demo-question { font-size:0.8rem; color:var(--text-muted); margin:0 0 0.75rem; }
-        .lp-demo-grid { display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; }
-        .lp-demo-opt { padding:0.5rem; border:1px solid var(--border); border-radius:0.5rem; font-size:0.8rem; color:var(--text-muted); }
-        .lp-demo-opt-correct { border:1.5px solid var(--teal); color:var(--teal); background:color-mix(in srgb, var(--teal) 8%, transparent); font-weight:600; }
-
-        /* ── Chain ── */
-        .lp-chain { display:flex; flex-direction:column; gap:0.4rem; text-align:left; }
-        .lp-chain-row { display:flex; align-items:center; gap:0.5rem; padding:0.45rem 0.75rem; border-radius:0.5rem; font-size:0.78rem; }
-        .lp-chain-num { font-size:0.65rem; color:var(--text-faint); min-width:1rem; }
-        .lp-chain-done { background:var(--bg-raised); color:var(--text-muted); }
-        .lp-chain-check { margin-left:auto; font-size:0.65rem; color:var(--correct); }
-        .lp-chain-active { border:1.5px solid var(--teal); background:color-mix(in srgb, var(--teal) 6%, transparent); color:var(--teal); font-weight:600; }
-        .lp-chain-arrow { margin-left:auto; font-size:0.65rem; color:var(--teal); }
-        .lp-chain-locked { background:var(--bg-raised); color:var(--text-faint); opacity:0.4; }
+        .lp-demo-label { font-size:0.65rem; color:var(--text-faint); text-transform:uppercase; letter-spacing:0.08em; display:block; margin-bottom:0.75rem; font-weight:600; }
+        .lp-demo-arabic { font-family:var(--font-amiri),serif; font-size:2.5rem; color:var(--text); direction:rtl; margin-bottom:0.5rem; line-height:1.4; }
+        .lp-demo-translit { font-size:1rem; color:var(--text-muted); margin-bottom:0.5rem; }
+        .lp-demo-meaning { font-family:var(--font-crimson),serif; font-style:italic; font-size:1rem; color:var(--text); margin-bottom:1rem; }
+        .lp-demo-audio { display:inline-flex; align-items:center; gap:0.4rem; padding:0.45rem 0.9rem; background:color-mix(in srgb, var(--teal) 10%, transparent); border:1px solid color-mix(in srgb, var(--teal) 30%, transparent); border-radius:0.5rem; color:var(--teal); font-size:0.75rem; font-weight:500; margin-bottom:1rem; }
+        .lp-demo-audio-icon { display:inline-flex; align-items:center; justify-content:center; width:14px; height:14px; border-radius:50%; background:var(--teal); color:#fff; font-size:0.55rem; padding-left:1px; }
+        .lp-demo-nav { display:flex; justify-content:space-between; font-size:0.7rem; color:var(--text-faint); padding-top:0.75rem; margin-top:0.25rem; border-top:1px dashed var(--border); }
+        .lp-demo-question { font-size:0.8rem; color:var(--text-muted); margin:0.75rem 0 0.75rem; }
+        .lp-demo-fields { display:flex; gap:0.5rem; margin-bottom:0.85rem; }
+        .lp-demo-input { background:var(--bg-base); border:1px solid var(--border); border-radius:0.5rem; padding:0.6rem 0.75rem; font-size:0.85rem; color:var(--text); text-align:left; display:flex; align-items:center; }
+        .lp-demo-input-grow { flex:1; }
+        .lp-demo-input-small { width:58px; justify-content:center; text-align:center; }
+        .lp-demo-ref { font-size:0.8rem; color:var(--text-muted); margin-bottom:0.25rem; padding-bottom:0.5rem; border-bottom:1px solid var(--border); font-weight:500; }
+        .lp-demo-textarea { background:var(--bg-base); border:1px solid var(--border); border-radius:0.5rem; padding:0.7rem 0.75rem; font-size:0.85rem; color:var(--text); text-align:left; min-height:2.75rem; margin-bottom:0.85rem; }
+        .lp-demo-btn { display:inline-block; padding:0.55rem 1.75rem; background:var(--teal); color:#fff; border-radius:0.5rem; font-size:0.8rem; font-weight:600; }
+        .lp-demo-caret { display:inline-block; width:1px; height:0.95em; background:var(--text); margin-left:2px; vertical-align:middle; animation:lp-caret 1s infinite; }
+        @keyframes lp-caret { 0%,50% { opacity:1; } 51%,100% { opacity:0; } }
 
         /* ── Chart ── */
         .lp-chart-card { background:var(--bg-card); border:1px solid var(--border); border-radius:1rem; padding:1.5rem; margin-bottom:2rem; text-align:center; }
