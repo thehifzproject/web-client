@@ -93,7 +93,8 @@ export async function getChapterWords(surahNumber: number): Promise<QuranVerse[]
 }
 
 export async function getSurahText(surahNumber: number): Promise<QuranSurahText> {
-  const key = `alqurancloud:surah:${surahNumber}:text`
+  // v2: meaning switched to The Clear Quran (Dr. Mustafa Khattab) from quran.com (translation 131)
+  const key = `surah:${surahNumber}:text:clearquran:v2`
   const cached = await getCached<QuranSurahText>(key)
   const rawText = cached ?? await fetchSurahText(surahNumber)
 

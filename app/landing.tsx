@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react'
 import Link from 'next/link'
+import { ArrowLeft, ArrowRight } from 'lucide-react'
 
 export function LandingPage() {
   return (
@@ -80,8 +81,8 @@ export function LandingPage() {
               <span>Play audio</span>
             </div>
             <div className="lp-demo-nav">
-              <span>← Prev</span>
-              <span>Next →</span>
+              <span className="lp-demo-nav-btn"><ArrowLeft size={12} /> Prev</span>
+              <span className="lp-demo-nav-btn">Next <ArrowRight size={12} /></span>
             </div>
           </div>
         </FadeIn>
@@ -300,7 +301,8 @@ export function LandingPage() {
         .lp-demo-meaning { font-family:var(--font-crimson),serif; font-style:italic; font-size:1rem; color:var(--text); margin-bottom:1rem; }
         .lp-demo-audio { display:inline-flex; align-items:center; gap:0.4rem; padding:0.45rem 0.9rem; background:color-mix(in srgb, var(--teal) 10%, transparent); border:1px solid color-mix(in srgb, var(--teal) 30%, transparent); border-radius:0.5rem; color:var(--teal); font-size:0.75rem; font-weight:500; margin-bottom:1rem; }
         .lp-demo-audio-icon { display:inline-flex; align-items:center; justify-content:center; width:14px; height:14px; border-radius:50%; background:var(--teal); color:#fff; font-size:0.55rem; padding-left:1px; }
-        .lp-demo-nav { display:flex; justify-content:space-between; font-size:0.7rem; color:var(--text-faint); padding-top:0.75rem; margin-top:0.25rem; border-top:1px dashed var(--border); }
+        .lp-demo-nav { display:flex; justify-content:space-between; font-size:0.72rem; color:var(--text-faint); padding-top:0.75rem; margin-top:0.25rem; border-top:1px dashed var(--border); }
+        .lp-demo-nav-btn { display:inline-flex; align-items:center; gap:0.3rem; }
         .lp-demo-question { font-size:0.8rem; color:var(--text-muted); margin:0.75rem 0 0.75rem; }
         .lp-demo-fields { display:flex; gap:0.5rem; margin-bottom:0.85rem; }
         .lp-demo-input { background:var(--bg-base); border:1px solid var(--border); border-radius:0.5rem; padding:0.6rem 0.75rem; font-size:0.85rem; color:var(--text); text-align:left; display:flex; align-items:center; }

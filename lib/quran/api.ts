@@ -35,12 +35,24 @@ export async function fetchChapterWords(surahNumber: number): Promise<QuranVerse
 }
 
 export async function fetchSurahText(surahNumber: number): Promise<QuranSurahText> {
-  const url = `https://api.alquran.cloud/v1/surah/${surahNumber}/editions/quran-uthmani,en.asad,en.transliteration`
-  const res = await fetch(url, { next: { revalidate: 86400 } })
-  if (!res.ok) throw new Error(`alquran.cloud API error ${res.status} for surah ${surahNumber}`)
-  const data = await res.json()
+  // Arabic + transliteration come from alquran.cloud
+  const cloudUrl = `https://api.alquran.cloud/v1/surah/${surahNumber}/editions/quran-uthmani,en.transliteration`
+  // Meaning comes from quran.com — translation ID 131 is The Clear Quran by Dr. Mustafa Khattab
+  const qcUrl = `https://api.quran.com/api/v4/quran/translations/131?chapter_number=${surahNumber}`
 
-  const [arabic, meaning, transliteration] = data.data
+  const [cloudRes, qcRes] = await Promise.all([
+    fetch(cloudUrl, { next: { revalidate: 86400 } }),
+    fetch(qcUrl, { next: { revalidate: 86400 } }),
+  ])
+
+  if (!cloudRes.ok) throw new Error(`alquran.cloud API error ${cloudRes.status} for surah ${surahNumber}`)
+  if (!qcRes.ok) throw new Error(`quran.com translations API error ${qcRes.status} for surah ${surahNumber}`)
+
+  const cloudData = await cloudRes.json()
+  const qcData = await qcRes.json()
+
+  const [arabic, transliteration] = cloudData.data
+  const translations: { text: string }[] = qcData.translations ?? []
 
   return {
     surahNumber,
@@ -49,7 +61,8 @@ export async function fetchSurahText(surahNumber: number): Promise<QuranSurahTex
       verseNumber: a.numberInSurah,
       arabic: a.text,
       transliteration: transliteration.ayahs[i]?.text ?? '',
-      meaning: meaning.ayahs[i]?.text ?? '',
+      // Strip footnote tags (e.g. <sup foot_note=...>1</sup>) that quran.com embeds
+      meaning: (translations[i]?.text ?? '').replace(/<[^>]*>/g, '').trim(),
     })),
   }
 }
