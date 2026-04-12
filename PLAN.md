@@ -1,6 +1,6 @@
 # The Hifz Project — Implementation Plan
 
-## Context j
+## Context
 
 Building a Quran memorization app that uses FSRS spaced repetition at three levels: individual words → full ayahs → full surahs. The goal is structured, bottom-up memorization: understand the words first, then the sentence, then the chapter. This is a fresh Next.js 16 project with Supabase for auth and DB.
 
