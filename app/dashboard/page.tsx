@@ -1,9 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { BookOpen, RefreshCw, Flame, Lock, Settings } from 'lucide-react'
+import { BookOpen, RefreshCw, Lock, Settings } from 'lucide-react'
 import { getDueCount, getTierCounts, getQueuedWordKeys, getQueuedAyahNumbers, isSurahQueued, getReviewSchedule, getDailyLearningStatus } from '@/lib/cards'
 import { ReviewCalendar } from './review-calendar'
+import { Streak } from './streak'
 import { CURRICULUM, getPhaseLabel, AVG_WORDS_PER_AYAH } from '@/lib/curriculum'
 import { getChapterWords } from '@/lib/quran/cache'
 
@@ -87,7 +88,7 @@ export default async function DashboardPage() {
           <span className="nav-name">The Hifz Project</span>
         </div>
         <div className="nav-right">
-          <div className="nav-streak"><Flame size={16} /><span>0</span></div>
+          <Streak pastReviews={schedule.pastReviews} />
           <Link href="/settings" className="nav-icon" aria-label="Settings"><Settings size={18} /></Link>
         </div>
       </nav>
