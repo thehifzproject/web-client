@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 
 // ─── Profile ────────────────────────────────────────────────────────────────
@@ -68,26 +69,10 @@ export async function resetAllProgress(): Promise<{ error?: string }> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Not authenticated' }
 
-  // Delete all learning data
-  await Promise.all([
-    supabase.from('word_cards').delete().eq('user_id', user.id),
-    supabase.from('ayah_cards').delete().eq('user_id', user.id),
-    supabase.from('surah_cards').delete().eq('user_id', user.id),
-    supabase.from('review_log').delete().eq('user_id', user.id),
-    supabase.from('known_surahs').delete().eq('user_id', user.id),
-  ])
-
-  // Reset curriculum to start
-  await supabase
-    .from('user_curriculum_progress')
-    .update({ curriculum_index: 0 })
-    .eq('user_id', user.id)
-
-  // Reset onboarding so user picks known surahs again
-  await supabase
-    .from('profiles')
-    .update({ onboarding_complete: false })
-    .eq('id', user.id)
+  // Single transactional RPC — see migration 013. Prevents partial resets
+  // where (for example) curriculum_index is zeroed but cards still exist.
+  const { error } = await supabase.rpc('reset_user_progress')
+  if (error) return { error: error.message }
 
   redirect('/onboarding')
 }
@@ -100,6 +85,40 @@ export async function signOut(): Promise<void> {
   redirect('/auth/login')
 }
 
+// ─── Subscription ───────────────────────────────────────────────────────────
+
+export interface SubscriptionStatus {
+  active: boolean
+  status: string | null
+  currentPeriodEnd: string | null
+  cancelAtPeriodEnd: boolean
+}
+
+export async function getSubscriptionStatus(): Promise<SubscriptionStatus> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { active: false, status: null, currentPeriodEnd: null, cancelAtPeriodEnd: false }
+
+  const { data } = await supabase
+    .from('subscriptions')
+    .select('status, current_period_end, cancel_at_period_end')
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  if (!data) return { active: false, status: null, currentPeriodEnd: null, cancelAtPeriodEnd: false }
+
+  const active =
+    ['active', 'trialing'].includes(data.status) &&
+    (!data.current_period_end || new Date(data.current_period_end) > new Date())
+
+  return {
+    active,
+    status: data.status,
+    currentPeriodEnd: data.current_period_end,
+    cancelAtPeriodEnd: data.cancel_at_period_end ?? false,
+  }
+}
+
 // ─── Delete Account ─────────────────────────────────────────────────────────
 
 export async function deleteAccount(): Promise<{ error?: string }> {
@@ -107,17 +126,12 @@ export async function deleteAccount(): Promise<{ error?: string }> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Not authenticated' }
 
-  // Delete all user data (cascade from auth.users handles profiles/preferences/known_surahs)
-  await Promise.all([
-    supabase.from('word_cards').delete().eq('user_id', user.id),
-    supabase.from('ayah_cards').delete().eq('user_id', user.id),
-    supabase.from('surah_cards').delete().eq('user_id', user.id),
-    supabase.from('review_log').delete().eq('user_id', user.id),
-    supabase.from('user_curriculum_progress').delete().eq('user_id', user.id),
-  ])
+  // Delete the auth user via service-role admin; the CASCADE on
+  // auth.users FK removes profiles/preferences/known_surahs/cards/etc.
+  const admin = createAdminClient()
+  const { error } = await admin.auth.admin.deleteUser(user.id)
+  if (error) return { error: error.message }
 
-  // Delete auth user via admin (requires service role — use RPC or manual)
-  // For now, sign out and clear data. Full deletion needs a Supabase Edge Function.
   await supabase.auth.signOut()
   redirect('/auth/login')
 }
