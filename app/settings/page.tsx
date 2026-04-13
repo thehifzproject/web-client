@@ -10,7 +10,10 @@ import {
   resetAllProgress,
   signOut,
   deleteAccount,
+  getSubscriptionStatus,
+  type SubscriptionStatus,
 } from '@/app/actions/settings'
+import { createCheckoutSession, createPortalSession } from '@/app/actions/billing'
 import { createClient } from '@/lib/supabase/client'
 import { TOTAL_UNIQUE_WORDS } from '@/lib/curriculum'
 
@@ -26,6 +29,9 @@ export default function SettingsPage() {
   const [displayName, setDisplayName] = useState('')
   const [dailyWords, setDailyWords] = useState(10)
   const [learnedWords, setLearnedWords] = useState(0)
+  const [sub, setSub] = useState<SubscriptionStatus>({
+    active: false, status: null, currentPeriodEnd: null, cancelAtPeriodEnd: false,
+  })
 
   useEffect(() => {
     async function load() {
@@ -42,18 +48,21 @@ export default function SettingsPage() {
       setDisplayName(profile?.display_name ?? '')
       setDailyWords(prefs?.daily_new_words ?? 10)
       setLearnedWords(wordCount.count ?? 0)
+
+      const subStatus = await getSubscriptionStatus()
+      setSub(subStatus)
+
       setLoaded(true)
     }
     load()
   }, [])
 
   // ── Theme ────────────────────────────────────────────────────────────────
-  const [theme, setTheme] = useState<Theme>('system')
-
-  useEffect(() => {
-    const stored = localStorage.getItem('theme') as Theme | null
-    if (stored === 'dark' || stored === 'light') setTheme(stored)
-  }, [])
+  const [theme, setTheme] = useState<Theme>(() => {
+    if (typeof window === 'undefined') return 'system'
+    const stored = localStorage.getItem('theme')
+    return stored === 'dark' || stored === 'light' ? stored : 'system'
+  })
 
   function applyTheme(t: Theme) {
     setTheme(t)
@@ -63,12 +72,12 @@ export default function SettingsPage() {
 
     if (t === 'system') {
       localStorage.removeItem('theme')
-      delete document.documentElement.dataset.theme
+      document.documentElement.removeAttribute('data-theme')
       return
     }
 
     localStorage.setItem('theme', t)
-    document.documentElement.dataset.theme = t
+    document.documentElement.setAttribute('data-theme', t)
 
     const dark = '--bg-base:#0e1117;--bg-raised:#181d2a;--bg-card:#1f2535;--border:#2a3145;--text:#e8edf5;--text-muted:#7a8899;--text-faint:#4a5568'
     const light = '--bg-base:#f4f6fa;--bg-raised:#ffffff;--bg-card:#ffffff;--border:#e2e8f0;--text:#1a1f2e;--text-muted:#6b7a8d;--text-faint:#9aa5b4'
@@ -117,6 +126,21 @@ export default function SettingsPage() {
       setPrefsMsg(null)
       const res = await updatePreferences(dailyWords)
       setPrefsMsg(res.error ? { text: res.error } : { ok: true, text: 'Saved' })
+    })
+  }
+
+  // ── Subscription ─────────────────────────────────────────────────────────
+  function handleUpgrade() {
+    startTransition(async () => {
+      const res = await createCheckoutSession()
+      if ('url' in res) window.location.href = res.url
+    })
+  }
+
+  function handleManageSubscription() {
+    startTransition(async () => {
+      const res = await createPortalSession()
+      if ('url' in res) window.location.href = res.url
     })
   }
 
@@ -242,6 +266,45 @@ export default function SettingsPage() {
             </button>
             {prefsMsg && <span className={prefsMsg.ok ? 's-ok' : 's-err'}>{prefsMsg.text}</span>}
           </div>
+        </section>
+
+        {/* ── Subscription ───────────────────────────────────────────────── */}
+        <section className="s-section">
+          <h2 className="s-heading">Subscription</h2>
+          {sub.active ? (
+            <div className="s-field">
+              <p className="s-label">Voice plan — active</p>
+              {sub.currentPeriodEnd && (
+                <p className="s-hint">
+                  {sub.cancelAtPeriodEnd ? 'Cancels' : 'Renews'} on{' '}
+                  {new Date(sub.currentPeriodEnd).toLocaleDateString()}
+                </p>
+              )}
+              <div className="s-row" style={{ marginTop: '0.5rem' }}>
+                <button
+                  className="s-btn s-btn-outline"
+                  onClick={handleManageSubscription}
+                  disabled={isPending}
+                >
+                  Manage subscription
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="s-field">
+              <p className="s-label">Free plan</p>
+              <p className="s-hint">Upgrade to unlock voice recitation — $5/month.</p>
+              <div className="s-row" style={{ marginTop: '0.5rem' }}>
+                <button
+                  className="s-btn s-btn-primary"
+                  onClick={handleUpgrade}
+                  disabled={isPending}
+                >
+                  Upgrade to Voice — $5/mo
+                </button>
+              </div>
+            </div>
+          )}
         </section>
 
         {/* ── Appearance ─────────────────────────────────────────────────── */}
