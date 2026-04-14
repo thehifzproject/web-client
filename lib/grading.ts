@@ -52,3 +52,27 @@ export function checkTransliteration(userAnswer: string, correctAnswer: string):
   const threshold = Math.max(1, Math.floor(correct.length * 0.25))
   return distance(user, correct) <= threshold
 }
+
+const HARAKAT_RE = /[\u064B-\u065F\u0670\u06D6-\u06ED]/g
+const TATWEEL_RE = /\u0640/g
+
+function normalizeArabic(s: string): string {
+  return s
+    .replace(HARAKAT_RE, '')
+    .replace(TATWEEL_RE, '')
+    .replace(/[\u0622\u0623\u0625]/g, '\u0627') // آ أ إ → ا
+    .replace(/\u0649/g, '\u064A') // ى → ي
+    .replace(/\u0629/g, '\u0647') // ة → ه
+    .replace(/[\u0624\u0626]/g, (m) => m === '\u0624' ? '\u0648' : '\u064A')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+export function checkArabicRecitation(userArabic: string, correctArabic: string): boolean {
+  const a = normalizeArabic(userArabic)
+  const b = normalizeArabic(correctArabic)
+  if (!a || !b) return false
+  const dist = distance(a, b)
+  const threshold = Math.max(1, Math.floor(b.length * 0.2))
+  return dist <= threshold
+}
