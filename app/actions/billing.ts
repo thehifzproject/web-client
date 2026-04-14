@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getStripe } from '@/lib/stripe'
+import { hasActiveSubscription } from '@/lib/subscription'
 import { headers } from 'next/headers'
 
 async function getOrigin(): Promise<string> {
@@ -41,6 +42,10 @@ export async function createCheckoutSession(): Promise<{ url: string } | { error
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user || !user.email) return { error: 'unauthorized' }
+
+  // Prevent duplicate subscriptions (and duplicate charges) if the user
+  // already has an active/trialing sub. They should use the portal instead.
+  if (await hasActiveSubscription(user.id)) return { error: 'already_subscribed' }
 
   const priceId = process.env.STRIPE_PRICE_VOICE
   if (!priceId) return { error: 'misconfigured' }

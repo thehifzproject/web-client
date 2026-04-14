@@ -5,6 +5,16 @@ import type Stripe from 'stripe'
 
 export const runtime = 'nodejs'
 
+function extractPeriodEnd(sub: Stripe.Subscription): string | null {
+  // In Stripe API 2025+, current_period_end moved from the Subscription
+  // object to items.data[0].current_period_end. Check both.
+  const topLevel = (sub as { current_period_end?: number }).current_period_end
+  const itemLevel = (sub.items?.data?.[0] as { current_period_end?: number } | undefined)?.current_period_end
+  const unix = topLevel ?? itemLevel
+  if (!unix || Number.isNaN(unix)) return null
+  return new Date(unix * 1000).toISOString()
+}
+
 async function upsertFromSubscription(sub: Stripe.Subscription) {
   const admin = createAdminClient()
   const customerId = typeof sub.customer === 'string' ? sub.customer : sub.customer.id
@@ -14,17 +24,25 @@ async function upsertFromSubscription(sub: Stripe.Subscription) {
     .select('user_id')
     .eq('stripe_customer_id', customerId)
     .maybeSingle()
-  if (!row) return
+  if (!row) {
+    console.warn('stripe webhook: no subscriptions row for customer', customerId)
+    return
+  }
 
-  await admin.from('subscriptions').upsert({
+  const { error } = await admin.from('subscriptions').upsert({
     user_id: row.user_id,
     stripe_customer_id: customerId,
     stripe_subscription_id: sub.id,
     status: sub.status,
-    current_period_end: new Date((sub as any).current_period_end * 1000).toISOString(),
+    current_period_end: extractPeriodEnd(sub),
     cancel_at_period_end: sub.cancel_at_period_end,
     updated_at: new Date().toISOString(),
   })
+  if (error) {
+    console.error('stripe webhook: upsert failed', { customerId, status: sub.status, error })
+    throw error
+  }
+  console.log('stripe webhook: synced subscription', { customerId, status: sub.status })
 }
 
 export async function POST(req: NextRequest) {
