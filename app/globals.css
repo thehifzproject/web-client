@@ -238,3 +238,31 @@ body {
   background: var(--bg-base);
   color: var(--text);
 }
+
+.voice-input { display: inline-flex; align-items: center; gap: 0.5rem; }
+.voice-btn {
+  width: 40px; height: 40px; border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--bg-base);
+  color: var(--text);
+  cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.voice-btn:hover:not(:disabled) { border-color: var(--teal); color: var(--teal); }
+.voice-btn-recording {
+  background: var(--incorrect, #e53e3e);
+  color: white;
+  border-color: var(--incorrect, #e53e3e);
+  animation: voice-pulse 1.4s infinite;
+}
+.voice-btn-recording:hover:not(:disabled) { color: white; border-color: var(--incorrect, #e53e3e); }
+.voice-btn-muted { opacity: 0.55; }
+.voice-btn:disabled { cursor: not-allowed; opacity: 0.6; }
+.voice-error { font-size: 0.78rem; color: var(--incorrect, #e53e3e); }
+@keyframes voice-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+}
+.animate-spin { animation: voice-spin 1s linear infinite; }
+@keyframes voice-spin { to { transform: rotate(360deg); } }
