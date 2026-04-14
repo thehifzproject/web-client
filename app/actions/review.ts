@@ -4,6 +4,11 @@ import { createClient } from '@/lib/supabase/server'
 import { getSurahText, getSurahAudio, getChapterWords } from '@/lib/quran/cache'
 import { gradeWordCard, gradeAyahCard, gradeSurahCard, logReviewActivity } from '@/lib/cards'
 import { CURRICULUM } from '@/lib/curriculum'
+import { shuffle } from '@/lib/shuffle'
+
+// Per-type cap on a single review batch. Without this a user with thousands
+// of overdue cards would pull them all in one request.
+const MAX_DUE_PER_TYPE = 200
 
 export type ReviewCardType =
   | 'word_transliteration'
@@ -31,6 +36,7 @@ export interface ReviewCard {
   surahName?: string
   // surah chain
   chainAyahNumber?: number
+  chainArabic?: string
   chainTransliteration?: string
 }
 
@@ -51,24 +57,24 @@ export async function getDueReviewCards(): Promise<ReviewCard[]> {
       .eq('user_id', user.id)
       .lte('due', now)
       .gt('srs_stage', 0)
-
-      .order('due', { ascending: true }),
+      .order('due', { ascending: true })
+      .limit(MAX_DUE_PER_TYPE),
     supabase
       .from('ayah_cards')
       .select('id,surah_number,ayah_number,card_type')
       .eq('user_id', user.id)
       .lte('due', now)
       .gt('srs_stage', 0)
-
-      .order('due', { ascending: true }),
+      .order('due', { ascending: true })
+      .limit(MAX_DUE_PER_TYPE),
     supabase
       .from('surah_cards')
       .select('id,surah_number')
       .eq('user_id', user.id)
       .lte('due', now)
       .gt('srs_stage', 0)
-
-      .order('due', { ascending: true }),
+      .order('due', { ascending: true })
+      .limit(MAX_DUE_PER_TYPE),
   ])
 
   const cards: ReviewCard[] = []
@@ -236,13 +242,14 @@ export async function getDueReviewCards(): Promise<ReviewCard[]> {
         surahNumber: row.surah_number,
         surahName: entry.name,
         chainAyahNumber: chainStart,
+        chainArabic: chainVerse?.arabic ?? '',
         chainTransliteration: (chainVerse?.easyTransliteration || chainVerse?.transliteration) ?? '',
       })
     }
   }
 
   // Shuffle cards for variety
-  return cards.sort(() => Math.random() - 0.5)
+  return shuffle(cards)
 }
 
 export async function submitReview(
