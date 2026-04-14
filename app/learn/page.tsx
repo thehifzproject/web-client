@@ -3,9 +3,13 @@
 import { useEffect, useState, useRef } from 'react'
 import { getLearnSessionData, graduateWords, graduateAyahs, graduateSurah } from '@/app/actions/learn'
 import type { LearnSessionData, WordItem, AyahItem, SurahChainItem } from '@/app/actions/learn'
-import { checkAnswer, checkSurahName, checkTransliteration } from '@/lib/grading'
+import { checkAnswer, checkSurahName, checkTransliteration, checkArabicRecitation } from '@/lib/grading'
+import { shuffle } from '@/lib/shuffle'
 import Link from 'next/link'
 import { ChevronLeft, ChevronRight, Volume2, Clock, RotateCcw, CheckCircle, XCircle, ArrowLeft, Loader2 } from 'lucide-react'
+import { VoiceInput } from '@/app/components/VoiceInput'
+import { UpgradeModal } from '@/app/components/UpgradeModal'
+import { getSubscriptionStatus } from '@/app/actions/settings'
 
 type Phase = 'browse' | 'test'
 type FlashState = 'none' | 'correct' | 'incorrect'
@@ -69,7 +73,7 @@ function buildWordTests(words: WordItem[]): TestItem[] {
       audioUrl: w.audioUrl,
     })
   }
-  return items.sort(() => Math.random() - 0.5)
+  return shuffle(items)
 }
 
 function buildAyahTests(ayahs: AyahItem[]): TestItem[] {
@@ -89,6 +93,7 @@ function buildAyahTests(ayahs: AyahItem[]): TestItem[] {
     items.push({
       id: `${a.surahNumber}_${a.ayahNumber}_r`,
       type: 'ayah_recite',
+      arabic: a.arabic,
       surahNumber: a.surahNumber,
       ayahNumber: a.ayahNumber,
       surahName: a.surahName,
@@ -96,13 +101,14 @@ function buildAyahTests(ayahs: AyahItem[]): TestItem[] {
       audioUrl: a.audioUrl,
     })
   }
-  return items.sort(() => Math.random() - 0.5)
+  return shuffle(items)
 }
 
 function buildSurahTests(chain: SurahChainItem[]): TestItem[] {
   return chain.map(c => ({
     id: `surah_${c.surahNumber}_${c.ayahNumber}`,
     type: 'surah_chain' as const,
+    arabic: c.arabic,
     surahName: c.surahName,
     chainAyahNumber: c.ayahNumber,
     correctAnswer: c.transliteration,
@@ -136,11 +142,16 @@ export default function LearnPage() {
   const [sessionDone, setSessionDone] = useState(false)
   const [graduating, setGraduating] = useState(false)
 
+  // Voice / subscription
+  const [hasSubscription, setHasSubscription] = useState(false)
+  const [showUpgrade, setShowUpgrade] = useState(false)
+
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null)
 
   useEffect(() => {
-    getLearnSessionData().then(data => {
+    Promise.all([getLearnSessionData(), getSubscriptionStatus()]).then(([data, sub]) => {
       setSession(data)
+      setHasSubscription(sub.active)
       setLoading(false)
     })
   }, [])
@@ -201,6 +212,25 @@ export default function LearnPage() {
       correct = checkTransliteration(answer, item.correctAnswer ?? '')
     } else if (item.type === 'surah_chain') {
       correct = checkTransliteration(answer, item.correctAnswer ?? '')
+    }
+
+    setLastCorrect(correct)
+    setShowResult(true)
+    setHintMessage('')
+    setFlash(correct ? 'correct' : 'incorrect')
+    setTimeout(() => setFlash('none'), 900)
+  }
+
+  function handleVoice(text: string) {
+    const item = testQueue[0]
+    if (!item) return
+    setAnswer(text)
+
+    let correct = false
+    if (item.type === 'word_transliteration' || item.type === 'ayah_recite' || item.type === 'surah_chain') {
+      correct = checkArabicRecitation(text, item.arabic ?? '')
+    } else {
+      return
     }
 
     setLastCorrect(correct)
@@ -346,9 +376,14 @@ export default function LearnPage() {
             shakeActive={shakeActive}
             hintMessage={hintMessage}
             inputRef={inputRef as React.RefObject<HTMLInputElement>}
+            hasSubscription={hasSubscription}
+            onVoice={handleVoice}
+            onUpgradeRequest={() => setShowUpgrade(true)}
           />
         ) : null}
       </main>
+
+      <UpgradeModal open={showUpgrade} onClose={() => setShowUpgrade(false)} />
 
       <style>{`
         .session-wrap { min-height:100dvh; background:var(--bg-base); display:flex; flex-direction:column; }
@@ -462,7 +497,7 @@ function BrowseCard({ item, sessionType, onPrev, onNext, isFirst, isLast }: {
 
 // ─── Test Card ────────────────────────────────────────────────────────────────
 
-function TestCard({ item, answer, answer2, onAnswer, onAnswer2, onSubmit, onSkip, onNext, showResult, lastCorrect, flash, shakeActive, hintMessage, inputRef }: {
+function TestCard({ item, answer, answer2, onAnswer, onAnswer2, onSubmit, onSkip, onNext, showResult, lastCorrect, flash, shakeActive, hintMessage, inputRef, hasSubscription, onVoice, onUpgradeRequest }: {
   item: TestItem
   answer: string
   answer2: string
@@ -477,6 +512,9 @@ function TestCard({ item, answer, answer2, onAnswer, onAnswer2, onSubmit, onSkip
   shakeActive: boolean
   hintMessage: string
   inputRef: React.RefObject<HTMLInputElement>
+  hasSubscription: boolean
+  onVoice: (text: string) => void
+  onUpgradeRequest: () => void
 }) {
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -580,6 +618,13 @@ function TestCard({ item, answer, answer2, onAnswer, onAnswer2, onSubmit, onSkip
             />
           )}
           {hintMessage && <p className="hint-message">{hintMessage}</p>}
+          {(item.type === 'word_transliteration' || item.type === 'ayah_recite' || item.type === 'surah_chain') && (
+            <VoiceInput
+              onTranscription={onVoice}
+              hasSubscription={hasSubscription}
+              onUpgradeRequest={onUpgradeRequest}
+            />
+          )}
           <button className="test-submit" onClick={onSubmit}>Submit</button>
           <button className="skip-btn" onClick={onSkip}>I don&apos;t know</button>
         </div>

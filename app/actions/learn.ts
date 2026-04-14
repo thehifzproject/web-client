@@ -12,7 +12,14 @@ import {
   logReviewActivityBatch,
   getDailyLearningStatus,
 } from '@/lib/cards'
-import { CURRICULUM } from '@/lib/curriculum'
+import { CURRICULUM, ALL_SURAHS } from '@/lib/curriculum'
+
+const VALID_SURAHS = new Set(ALL_SURAHS.map(s => s.surahNumber))
+const MAX_BATCH = 500
+
+function surahAyahCount(surahNumber: number): number {
+  return ALL_SURAHS.find(s => s.surahNumber === surahNumber)?.ayahCount ?? 0
+}
 
 export type SessionType = 'words' | 'ayahs' | 'surah' | 'complete' | 'daily_limit'
 
@@ -39,6 +46,7 @@ export interface SurahChainItem {
   surahNumber: number
   surahName: string
   ayahNumber: number
+  arabic: string
   transliteration: string
 }
 
@@ -296,6 +304,7 @@ async function buildSurahSession(
       surahNumber,
       surahName,
       ayahNumber: v.verseNumber,
+      arabic: v.arabic,
       transliteration: v.easyTransliteration || v.transliteration,
     }))
 
@@ -320,16 +329,21 @@ export async function graduateWords(surahNumber: number, newWordKeys: string[]):
   } = await supabase.auth.getUser()
   if (!user) return
 
+  if (!VALID_SURAHS.has(surahNumber)) return
+  if (!Array.isArray(newWordKeys) || newWordKeys.length === 0 || newWordKeys.length > MAX_BATCH) return
+  // word_key is a numeric string in the upstream API; reject anything else
+  // so a caller can't insert arbitrary rows into word_cards.
+  const sanitized = newWordKeys.filter(k => typeof k === 'string' && /^\d+$/.test(k))
+  if (sanitized.length === 0) return
+
   // Add word cards only — the ayah card is created by graduateAyahs
-  await Promise.all(newWordKeys.map(key => addWordToQueue(user.id, key)))
+  await Promise.all(sanitized.map(key => addWordToQueue(user.id, key)))
 
   // Log learning activity for the calendar
-  if (newWordKeys.length > 0) {
-    await logReviewActivityBatch(
-      user.id,
-      newWordKeys.map(key => ({ cardTable: 'word_cards' as const, cardId: null, correct: true })),
-    )
-  }
+  await logReviewActivityBatch(
+    user.id,
+    sanitized.map(() => ({ cardTable: 'word_cards' as const, cardId: null, correct: true })),
+  )
 }
 
 export async function graduateAyahs(surahNumber: number, newAyahNumbers: number[]): Promise<void> {
@@ -339,19 +353,26 @@ export async function graduateAyahs(surahNumber: number, newAyahNumbers: number[
   } = await supabase.auth.getUser()
   if (!user) return
 
-  await Promise.all(newAyahNumbers.map(n => addAyahToQueue(user.id, surahNumber, n)))
+  if (!VALID_SURAHS.has(surahNumber)) return
+  if (!Array.isArray(newAyahNumbers) || newAyahNumbers.length === 0 || newAyahNumbers.length > MAX_BATCH) return
+
+  const maxAyah = surahAyahCount(surahNumber)
+  const sanitized = newAyahNumbers.filter(
+    n => Number.isInteger(n) && n >= 1 && n <= maxAyah
+  )
+  if (sanitized.length === 0) return
+
+  await Promise.all(sanitized.map(n => addAyahToQueue(user.id, surahNumber, n)))
 
   // Log learning activity for the calendar
-  if (newAyahNumbers.length > 0) {
-    await logReviewActivityBatch(
-      user.id,
-      newAyahNumbers.map(() => ({ cardTable: 'ayah_cards' as const, cardId: null, correct: true })),
-    )
-  }
+  await logReviewActivityBatch(
+    user.id,
+    sanitized.map(() => ({ cardTable: 'ayah_cards' as const, cardId: null, correct: true })),
+  )
 
   // Check if all ayahs of this surah are now queued → unlock surah card
   const entry = CURRICULUM.find(e => e.surahNumber === surahNumber)
-    ?? { ayahCount: surahNumber === 1 ? 7 : 0 } // Fatihah fallback
+    ?? { ayahCount: maxAyah }
 
   const queuedAyahs = await getQueuedAyahNumbers(user.id, surahNumber)
   if (queuedAyahs.size >= entry.ayahCount) {
@@ -365,6 +386,8 @@ export async function graduateSurah(surahNumber: number): Promise<void> {
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) return
+
+  if (!VALID_SURAHS.has(surahNumber)) return
 
   await addSurahToQueue(user.id, surahNumber)
 
