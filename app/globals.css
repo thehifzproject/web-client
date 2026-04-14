@@ -141,3 +141,100 @@ body {
   :root:not([data-theme="light"]) .logo-icon { filter: invert(1); }
 }
 [data-theme="dark"] .logo-icon { filter: invert(1); }
+
+/* ─── Upgrade Modal ──────────────────────────────────────────────────────── */
+.upgrade-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  animation: fade-in 0.15s ease-out;
+}
+.upgrade-modal {
+  background: var(--bg-card);
+  color: var(--text);
+  padding: 1.75rem;
+  border-radius: 0.875rem;
+  border: 1px solid var(--border);
+  max-width: 420px;
+  width: 90%;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.35);
+}
+.upgrade-modal h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.upgrade-modal .subtitle {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+.upgrade-modal-close {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.6rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  padding: 0.25rem;
+  border-radius: 0.35rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.upgrade-modal-close:hover {
+  background: var(--bg-base);
+  color: var(--text);
+}
+.upgrade-benefits {
+  margin: 0;
+  padding-left: 1.15rem;
+  color: var(--text);
+  font-size: 0.9rem;
+}
+.upgrade-benefits li {
+  margin: 0.2rem 0;
+}
+.upgrade-modal .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.6rem 1rem;
+  border-radius: 0.55rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  font-family: inherit;
+  transition: opacity 0.15s ease, background 0.15s ease;
+}
+.upgrade-modal .btn-primary {
+  background: var(--teal);
+  color: #ffffff;
+}
+.upgrade-modal .btn-primary:hover:not(:disabled) {
+  background: var(--teal-light);
+}
+.upgrade-modal .btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.upgrade-modal .btn-ghost {
+  background: transparent;
+  color: var(--text-muted);
+  border-color: var(--border);
+}
+.upgrade-modal .btn-ghost:hover {
+  background: var(--bg-base);
+  color: var(--text);
+}
