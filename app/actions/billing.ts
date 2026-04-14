@@ -15,15 +15,27 @@ async function getOrigin(): Promise<string> {
 
 async function getOrCreateCustomerId(userId: string, email: string): Promise<string> {
   const admin = createAdminClient()
+  const stripe = getStripe()
+
   const { data: existing } = await admin
     .from('subscriptions')
     .select('stripe_customer_id')
     .eq('user_id', userId)
     .maybeSingle()
 
-  if (existing?.stripe_customer_id) return existing.stripe_customer_id
+  if (existing?.stripe_customer_id) {
+    // Verify the cached customer still exists in Stripe. If it was deleted
+    // (manually, or in a different account/mode), fall through to recreate
+    // rather than failing every subsequent checkout.
+    try {
+      const customer = await stripe.customers.retrieve(existing.stripe_customer_id)
+      if (!customer.deleted) return existing.stripe_customer_id
+    } catch (err) {
+      const code = (err as { code?: string }).code
+      if (code !== 'resource_missing') throw err
+    }
+  }
 
-  const stripe = getStripe()
   const customer = await stripe.customers.create({
     email,
     metadata: { supabase_user_id: userId },
@@ -32,7 +44,10 @@ async function getOrCreateCustomerId(userId: string, email: string): Promise<str
   await admin.from('subscriptions').upsert({
     user_id: userId,
     stripe_customer_id: customer.id,
+    stripe_subscription_id: null,
     status: 'incomplete',
+    current_period_end: null,
+    cancel_at_period_end: false,
   })
 
   return customer.id
