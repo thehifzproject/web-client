@@ -3,7 +3,10 @@
 import { useEffect, useState, useRef } from 'react'
 import { getDueReviewCards, submitReview } from '@/app/actions/review'
 import type { ReviewCard, ReviewCardType } from '@/app/actions/review'
-import { checkAnswer, checkSurahName, checkTransliteration } from '@/lib/grading'
+import { checkAnswer, checkSurahName, checkTransliteration, checkArabicRecitation } from '@/lib/grading'
+import { getSubscriptionStatus } from '@/app/actions/settings'
+import { VoiceInput } from '@/app/components/VoiceInput'
+import { UpgradeModal } from '@/app/components/UpgradeModal'
 import Link from 'next/link'
 import { ArrowLeft, CheckCircle, XCircle, Loader2, Volume2 } from 'lucide-react'
 
@@ -23,11 +26,14 @@ export default function ReviewPage() {
   const [submitting, setSubmitting] = useState(false)
   const [shakeActive, setShakeActive] = useState(false)
   const [hintMessage, setHintMessage] = useState('')
+  const [hasSubscription, setHasSubscription] = useState(false)
+  const [showUpgrade, setShowUpgrade] = useState(false)
   const inputRef = useRef<HTMLInputElement | null>(null)
 
   useEffect(() => {
-    getDueReviewCards().then(c => {
+    Promise.all([getDueReviewCards(), getSubscriptionStatus()]).then(([c, s]) => {
       setCards(c)
+      setHasSubscription(s.active)
       setLoading(false)
     })
   }, [])
@@ -69,6 +75,31 @@ export default function ReviewPage() {
       isCorrect = checkTransliteration(answer, card.ayahTransliteration ?? '')
     } else if (card.type === 'surah_chain') {
       isCorrect = checkTransliteration(answer, card.chainTransliteration ?? '')
+    }
+
+    setLastCorrect(isCorrect)
+    setShowResult(true)
+    setHintMessage('')
+    if (isCorrect) {
+      setFlash('correct')
+      setCorrect(c => c + 1)
+    } else {
+      setFlash('incorrect')
+    }
+    setTimeout(() => setFlash('none'), 900)
+  }
+
+  function handleVoiceTranscription(text: string) {
+    if (!card) return
+    setAnswer(text)
+
+    let isCorrect = false
+    if (card.type === 'word_transliteration') {
+      isCorrect = checkArabicRecitation(text, card.wordArabic ?? '')
+    } else if (card.type === 'ayah_recite') {
+      isCorrect = checkArabicRecitation(text, card.ayahArabic ?? '')
+    } else if (card.type === 'surah_chain') {
+      isCorrect = checkArabicRecitation(text, card.chainArabic ?? '')
     }
 
     setLastCorrect(isCorrect)
@@ -252,6 +283,13 @@ export default function ReviewPage() {
                 <input ref={inputRef} className="test-input" placeholder="Type your answer..." value={answer} onChange={e => { setAnswer(e.target.value); if (hintMessage) setHintMessage('') }} onKeyDown={handleKeyDown} />
               )}
               {hintMessage && <p className="hint-message">{hintMessage}</p>}
+              {(card.type === 'word_transliteration' || card.type === 'ayah_recite' || card.type === 'surah_chain') && !showResult && (
+                <VoiceInput
+                  onTranscription={handleVoiceTranscription}
+                  hasSubscription={hasSubscription}
+                  onUpgradeRequest={() => setShowUpgrade(true)}
+                />
+              )}
               <button className="test-submit" onClick={checkCurrentAnswer}>Submit</button>
               <button className="skip-btn" onClick={skipCard}>I don&apos;t know</button>
             </div>
@@ -312,6 +350,7 @@ export default function ReviewPage() {
         @keyframes spin { to { transform:rotate(360deg); } }
         .animate-spin { animation:spin 1s linear infinite; }
       `}</style>
+      <UpgradeModal open={showUpgrade} onClose={() => setShowUpgrade(false)} />
     </div>
   )
 }
