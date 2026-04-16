@@ -151,14 +151,19 @@ export default function LearnPage() {
 
   useEffect(() => {
     async function load() {
-      if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('checkout') === 'success') {
-        await syncSubscriptionFromStripe()
-        window.history.replaceState({}, '', window.location.pathname)
+      try {
+        if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('checkout') === 'success') {
+          try { await syncSubscriptionFromStripe() } catch (e) { console.error('sync sub failed', e) }
+          window.history.replaceState({}, '', window.location.pathname)
+        }
+        const [data, sub] = await Promise.all([getLearnSessionData(), getSubscriptionStatus()])
+        setSession(data)
+        setHasSubscription(sub.active)
+      } catch (e) {
+        console.error('learn load failed', e)
+      } finally {
+        setLoading(false)
       }
-      const [data, sub] = await Promise.all([getLearnSessionData(), getSubscriptionStatus()])
-      setSession(data)
-      setHasSubscription(sub.active)
-      setLoading(false)
     }
     load()
   }, [])

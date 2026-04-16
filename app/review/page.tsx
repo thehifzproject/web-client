@@ -33,14 +33,19 @@ export default function ReviewPage() {
 
   useEffect(() => {
     async function load() {
-      if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('checkout') === 'success') {
-        await syncSubscriptionFromStripe()
-        window.history.replaceState({}, '', window.location.pathname)
+      try {
+        if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('checkout') === 'success') {
+          try { await syncSubscriptionFromStripe() } catch (e) { console.error('sync sub failed', e) }
+          window.history.replaceState({}, '', window.location.pathname)
+        }
+        const [c, s] = await Promise.all([getDueReviewCards(), getSubscriptionStatus()])
+        setCards(c)
+        setHasSubscription(s.active)
+      } catch (e) {
+        console.error('review load failed', e)
+      } finally {
+        setLoading(false)
       }
-      const [c, s] = await Promise.all([getDueReviewCards(), getSubscriptionStatus()])
-      setCards(c)
-      setHasSubscription(s.active)
-      setLoading(false)
     }
     load()
   }, [])
