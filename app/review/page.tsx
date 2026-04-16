@@ -5,6 +5,7 @@ import { getDueReviewCards, submitReview } from '@/app/actions/review'
 import type { ReviewCard, ReviewCardType } from '@/app/actions/review'
 import { checkAnswer, checkSurahName, checkTransliteration, checkArabicRecitation } from '@/lib/grading'
 import { getSubscriptionStatus } from '@/app/actions/settings'
+import { syncSubscriptionFromStripe } from '@/app/actions/billing'
 import { VoiceInput } from '@/app/components/VoiceInput'
 import { UpgradeModal } from '@/app/components/UpgradeModal'
 import Link from 'next/link'
@@ -31,11 +32,17 @@ export default function ReviewPage() {
   const inputRef = useRef<HTMLInputElement | null>(null)
 
   useEffect(() => {
-    Promise.all([getDueReviewCards(), getSubscriptionStatus()]).then(([c, s]) => {
+    async function load() {
+      if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('checkout') === 'success') {
+        await syncSubscriptionFromStripe()
+        window.history.replaceState({}, '', window.location.pathname)
+      }
+      const [c, s] = await Promise.all([getDueReviewCards(), getSubscriptionStatus()])
       setCards(c)
       setHasSubscription(s.active)
       setLoading(false)
-    })
+    }
+    load()
   }, [])
 
   useEffect(() => {

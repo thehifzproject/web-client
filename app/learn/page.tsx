@@ -10,6 +10,7 @@ import { ChevronLeft, ChevronRight, Volume2, Clock, RotateCcw, CheckCircle, XCir
 import { VoiceInput } from '@/app/components/VoiceInput'
 import { UpgradeModal } from '@/app/components/UpgradeModal'
 import { getSubscriptionStatus } from '@/app/actions/settings'
+import { syncSubscriptionFromStripe } from '@/app/actions/billing'
 
 type Phase = 'browse' | 'test'
 type FlashState = 'none' | 'correct' | 'incorrect'
@@ -149,11 +150,17 @@ export default function LearnPage() {
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null)
 
   useEffect(() => {
-    Promise.all([getLearnSessionData(), getSubscriptionStatus()]).then(([data, sub]) => {
+    async function load() {
+      if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('checkout') === 'success') {
+        await syncSubscriptionFromStripe()
+        window.history.replaceState({}, '', window.location.pathname)
+      }
+      const [data, sub] = await Promise.all([getLearnSessionData(), getSubscriptionStatus()])
       setSession(data)
       setHasSubscription(sub.active)
       setLoading(false)
-    })
+    }
+    load()
   }, [])
 
   const currentTestId = testQueue[0]?.id

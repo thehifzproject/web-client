@@ -10,7 +10,8 @@ export function UpgradeModal({ open, onClose }: { open: boolean; onClose: () => 
 
   async function handleUpgrade() {
     setLoading(true)
-    const res = await createCheckoutSession()
+    const returnTo = window.location.pathname + window.location.search
+    const res = await createCheckoutSession(returnTo)
     if ('url' in res) {
       window.location.href = res.url
     } else {

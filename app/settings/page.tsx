@@ -13,7 +13,7 @@ import {
   getSubscriptionStatus,
   type SubscriptionStatus,
 } from '@/app/actions/settings'
-import { createCheckoutSession, createPortalSession } from '@/app/actions/billing'
+import { createCheckoutSession, createPortalSession, syncSubscriptionFromStripe } from '@/app/actions/billing'
 import { createClient } from '@/lib/supabase/client'
 import { TOTAL_UNIQUE_WORDS } from '@/lib/curriculum'
 
@@ -48,6 +48,13 @@ export default function SettingsPage() {
       setDisplayName(profile?.display_name ?? '')
       setDailyWords(prefs?.daily_new_words ?? 10)
       setLearnedWords(wordCount.count ?? 0)
+
+      // If we just returned from Stripe Checkout, reconcile directly from
+      // Stripe before reading local state so the UI reflects the new sub
+      // even if the webhook hasn't fired yet.
+      if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('checkout') === 'success') {
+        await syncSubscriptionFromStripe()
+      }
 
       const subStatus = await getSubscriptionStatus()
       setSub(subStatus)
