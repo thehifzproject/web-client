@@ -20,7 +20,7 @@ function computeStreak(pastReviews: string[]): number {
   const todayStr = localDateStr(now)
 
   // Walk backwards from today (or yesterday if no reviews yet today)
-  let cursor = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const cursor = new Date(now.getFullYear(), now.getMonth(), now.getDate())
   if (!activeDays.has(todayStr)) {
     // Allow streak to still count if yesterday was active (haven't reviewed today yet)
     cursor.setDate(cursor.getDate() - 1)

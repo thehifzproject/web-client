@@ -17,6 +17,15 @@ export async function completeOnboarding(
   } = await supabase.auth.getUser()
   if (!user) return { error: 'Not authenticated' }
 
+  // Block re-running onboarding: protects a user from wiping their preloaded
+  // curriculum state if the onboarding action gets replayed (e.g. a stale tab).
+  const { data: existing } = await supabase
+    .from('profiles')
+    .select('onboarding_complete')
+    .eq('id', user.id)
+    .single()
+  if (existing?.onboarding_complete) return { error: 'Onboarding already complete' }
+
   // Validate surah numbers — only accept valid surah numbers (1–114)
   const validSurahNumbers = new Set(ALL_SURAHS.map(s => s.surahNumber))
   const sanitized = knownSurahNumbers.filter(n =>

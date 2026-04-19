@@ -3,6 +3,7 @@
 import { useState, useTransition, useMemo, useCallback } from 'react'
 import { ALL_SURAHS, TOTAL_UNIQUE_WORDS } from '@/lib/curriculum'
 import { completeOnboarding } from '@/app/actions/onboarding'
+import Image from 'next/image'
 import { Loader2, ChevronLeft, ChevronRight, Check } from 'lucide-react'
 
 type Step = 'welcome' | 'fatihah' | 'surahs' | 'pace' | 'processing'
@@ -129,7 +130,7 @@ export default function OnboardingPage() {
   return (
     <div className="onboarding-wrap">
       <div className="onboarding-logo">
-        <img src="/logo-black.png" alt="" className="logo-icon" width={20} height={20} />
+        <Image src="/logo-black.png" alt="" className="logo-icon" width={20} height={20} />
         <span style={{ fontFamily: 'var(--font-crimson)', fontSize: '1.1rem', fontWeight: 600 }}>
           The Hifz Project
         </span>

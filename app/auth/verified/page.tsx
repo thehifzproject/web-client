@@ -1,3 +1,5 @@
+import Image from 'next/image'
+
 export default function VerifiedPage() {
   return (
     <div className="verified-page">
@@ -18,7 +20,7 @@ export default function VerifiedPage() {
 
       <div className="verified-card">
         <div className="verified-logo">
-          <img src="/logo-black.png" alt="" className="logo-icon" width={24} height={24} />
+          <Image src="/logo-black.png" alt="" className="logo-icon" width={24} height={24} />
           <span className="verified-logo-name">The Hifz Project</span>
         </div>
 

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { ArrowLeft, Eye, EyeOff, Loader2 } from 'lucide-react'
 
 export default function LoginPage() {
@@ -56,7 +57,7 @@ export default function LoginPage() {
 
       <div className="auth-card animate-fade-in">
         <div className="auth-logo">
-          <img src="/logo-black.png" alt="" className="logo-icon" width={24} height={24} />
+          <Image src="/logo-black.png" alt="" className="logo-icon" width={24} height={24} />
           <span className="auth-logo-name">The Hifz Project</span>
         </div>
 

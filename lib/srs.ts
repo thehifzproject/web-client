@@ -39,9 +39,9 @@ export function gradeCardRow(
     return { srs_stage: newStage, due: new Date(now.getTime() + ms).toISOString() }
   }
 
-  // Incorrect: drop stages based on WaniKani penalty
-  const penaltyFactor = currentStage >= 5 ? 2 : 1
-  const stagesDrop = Math.ceil(1 / 2) * penaltyFactor // ceil(1/2) = 1
+  // Incorrect: drop stages based on WaniKani penalty.
+  // Apprentice (≤4): drop 1 stage. Guru+ (≥5): drop 2.
+  const stagesDrop = currentStage >= 5 ? 2 : 1
   const newStage = Math.max(1, currentStage - stagesDrop)
   const ms = SRS_INTERVALS_HOURS[newStage] * 60 * 60 * 1000
   return { srs_stage: newStage, due: new Date(now.getTime() + ms).toISOString() }

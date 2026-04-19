@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { BookOpen, RefreshCw, Lock, Settings } from 'lucide-react'
 import { getDueCount, getTierCounts, getQueuedWordKeys, getQueuedAyahNumbers, isSurahQueued, getReviewSchedule, getDailyLearningStatus } from '@/lib/cards'
 import { ReviewCalendar } from './review-calendar'
@@ -84,7 +85,7 @@ export default async function DashboardPage() {
     <div className="dash-wrap">
       <nav className="dash-nav">
         <div className="nav-logo">
-          <img src="/logo-black.png" alt="" className="logo-icon" width={20} height={20} />
+          <Image src="/logo-black.png" alt="" className="logo-icon" width={20} height={20} />
           <span className="nav-name">The Hifz Project</span>
         </div>
         <div className="nav-right">

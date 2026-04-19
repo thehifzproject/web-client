@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { Eye, EyeOff, Loader2, Mail } from 'lucide-react'
 
 export default function SignupPage() {
@@ -108,7 +109,7 @@ export default function SignupPage() {
       {emailSent ? (
         <div className="auth-card animate-fade-in" style={{ textAlign: 'center' }}>
           <div className="auth-logo">
-            <img src="/logo-black.png" alt="" className="logo-icon" width={24} height={24} />
+            <Image src="/logo-black.png" alt="" className="logo-icon" width={24} height={24} />
             <span className="auth-logo-name">The Hifz Project</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'center', margin: '0.5rem 0 1.5rem' }}>
@@ -129,7 +130,7 @@ export default function SignupPage() {
 
       <div className="auth-card animate-fade-in">
         <div className="auth-logo">
-          <img src="/logo-black.png" alt="" className="logo-icon" width={24} height={24} />
+          <Image src="/logo-black.png" alt="" className="logo-icon" width={24} height={24} />
           <span className="auth-logo-name">The Hifz Project</span>
         </div>
 

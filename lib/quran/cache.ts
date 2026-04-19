@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { fetchChapterWords, fetchSurahText, fetchSurahAudio } from './api'
 import type { QuranVerse, QuranSurahText, QuranSurahAudio } from './types'
 import { easyWordTransliteration, easyAyahTransliteration } from './pronunciation'
@@ -19,7 +20,10 @@ async function getCached<T>(key: string): Promise<T | null> {
 }
 
 async function setCache(key: string, value: unknown): Promise<void> {
-  const supabase = await createClient()
+  // Writes use the service-role client. The quran_cache table has no RLS write
+  // policies for normal users (see migration 012) so that a compromised
+  // authenticated session can't poison the shared cache.
+  const supabase = createAdminClient()
   const now = new Date()
   const expiresAt = new Date(now.getTime() + WEEK_MS)
 
