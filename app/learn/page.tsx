@@ -609,34 +609,38 @@ function TestCard({ item, answer, answer2, onAnswer, onAnswer2, onSubmit, onSkip
                 onKeyDown={handleKeyDown}
               />
             </div>
-          ) : isMultiline ? (
-            <textarea
-              ref={inputRef as unknown as React.RefObject<HTMLTextAreaElement>}
-              className="test-input textarea"
-              placeholder="Type transliteration..."
-              value={answer}
-              onChange={e => onAnswer(e.target.value)}
-              onKeyDown={handleKeyDown}
-              rows={3}
-            />
           ) : (
-            <input
-              ref={inputRef as React.RefObject<HTMLInputElement>}
-              className="test-input"
-              placeholder="Type your answer..."
-              value={answer}
-              onChange={e => onAnswer(e.target.value)}
-              onKeyDown={handleKeyDown}
-            />
+            <div className="input-row">
+              {(item.type === 'word_transliteration' || item.type === 'ayah_recite' || item.type === 'surah_chain') && (
+                <VoiceInput
+                  onTranscription={onVoice}
+                  hasSubscription={hasSubscription}
+                  onUpgradeRequest={onUpgradeRequest}
+                />
+              )}
+              {isMultiline ? (
+                <textarea
+                  ref={inputRef as unknown as React.RefObject<HTMLTextAreaElement>}
+                  className="test-input textarea"
+                  placeholder="Type transliteration..."
+                  value={answer}
+                  onChange={e => onAnswer(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  rows={3}
+                />
+              ) : (
+                <input
+                  ref={inputRef as React.RefObject<HTMLInputElement>}
+                  className="test-input"
+                  placeholder="Type your answer..."
+                  value={answer}
+                  onChange={e => onAnswer(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                />
+              )}
+            </div>
           )}
           {hintMessage && <p className="hint-message">{hintMessage}</p>}
-          {(item.type === 'word_transliteration' || item.type === 'ayah_recite' || item.type === 'surah_chain') && (
-            <VoiceInput
-              onTranscription={onVoice}
-              hasSubscription={hasSubscription}
-              onUpgradeRequest={onUpgradeRequest}
-            />
-          )}
           <button className="test-submit" onClick={onSubmit}>Submit</button>
           <button className="skip-btn" onClick={onSkip}>I don&apos;t know</button>
         </div>
@@ -666,6 +670,8 @@ function TestCard({ item, answer, answer2, onAnswer, onAnswer2, onSubmit, onSkip
         .test-ayah-ref { font-family:var(--font-crimson),serif; font-size:1.25rem; color:var(--text); font-weight:600; text-align:center; }
         .test-inputs { width:100%; display:flex; flex-direction:column; gap:0.75rem; margin-top:auto; padding-top:1.5rem; }
         .identify-inputs { display:grid; grid-template-columns:1fr auto; gap:0.5rem; }
+        .input-row { display:flex; align-items:center; gap:0.5rem; }
+        .input-row .test-input { flex:1; min-width:0; }
         .test-input { width:100%; background:var(--bg-base); border:1px solid var(--border); border-radius:0.6rem; padding:0.875rem 1rem; color:var(--text); font-size:1rem; outline:none; transition:border-color 0.15s; resize:none; }
         .test-input:focus { border-color:var(--teal); }
         .test-input.small { width:90px; }

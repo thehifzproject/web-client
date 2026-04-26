@@ -289,19 +289,23 @@ export default function ReviewPage() {
                   <input ref={inputRef} className="test-input" placeholder="Surah name..." value={answer} onChange={e => { setAnswer(e.target.value); if (hintMessage) setHintMessage('') }} onKeyDown={handleKeyDown} />
                   <input className="test-input small" placeholder="Ayah #" value={answer2} onChange={e => setAnswer2(e.target.value)} onKeyDown={handleKeyDown} />
                 </div>
-              ) : isMultiline ? (
-                <textarea className="test-input textarea" placeholder="Type transliteration..." value={answer} onChange={e => setAnswer(e.target.value)} onKeyDown={handleKeyDown} rows={3} />
               ) : (
-                <input ref={inputRef} className="test-input" placeholder="Type your answer..." value={answer} onChange={e => { setAnswer(e.target.value); if (hintMessage) setHintMessage('') }} onKeyDown={handleKeyDown} />
+                <div className="input-row">
+                  {(card.type === 'word_transliteration' || card.type === 'ayah_recite' || card.type === 'surah_chain') && !showResult && (
+                    <VoiceInput
+                      onTranscription={handleVoiceTranscription}
+                      hasSubscription={hasSubscription}
+                      onUpgradeRequest={() => setShowUpgrade(true)}
+                    />
+                  )}
+                  {isMultiline ? (
+                    <textarea className="test-input textarea" placeholder="Type transliteration..." value={answer} onChange={e => setAnswer(e.target.value)} onKeyDown={handleKeyDown} rows={3} />
+                  ) : (
+                    <input ref={inputRef} className="test-input" placeholder="Type your answer..." value={answer} onChange={e => { setAnswer(e.target.value); if (hintMessage) setHintMessage('') }} onKeyDown={handleKeyDown} />
+                  )}
+                </div>
               )}
               {hintMessage && <p className="hint-message">{hintMessage}</p>}
-              {(card.type === 'word_transliteration' || card.type === 'ayah_recite' || card.type === 'surah_chain') && !showResult && (
-                <VoiceInput
-                  onTranscription={handleVoiceTranscription}
-                  hasSubscription={hasSubscription}
-                  onUpgradeRequest={() => setShowUpgrade(true)}
-                />
-              )}
               <button className="test-submit" onClick={checkCurrentAnswer}>Submit</button>
               <button className="skip-btn" onClick={skipCard}>I don&apos;t know</button>
             </div>
@@ -344,6 +348,8 @@ export default function ReviewPage() {
         .audio-btn:hover { color:var(--teal); border-color:var(--teal); }
         .test-inputs { width:100%; display:flex; flex-direction:column; gap:0.75rem; margin-top:auto; }
         .identify-inputs { display:grid; grid-template-columns:1fr auto; gap:0.5rem; }
+        .input-row { display:flex; align-items:center; gap:0.5rem; }
+        .input-row .test-input { flex:1; min-width:0; }
         .test-input { width:100%; background:var(--bg-base); border:1px solid var(--border); border-radius:0.6rem; padding:0.875rem 1rem; color:var(--text); font-size:1rem; outline:none; transition:border-color 0.15s; resize:none; }
         .test-input:focus { border-color:var(--teal); }
         .test-input.small { width:90px; }
