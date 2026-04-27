@@ -3,8 +3,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { getChapterWords, getSurahText, getSurahAudio } from '@/lib/quran/cache'
 import {
-  addWordToQueue,
-  addAyahToQueue,
+  addWordsToQueue,
+  addAyahsToQueue,
   addSurahToQueue,
   getQueuedWordKeys,
   getQueuedAyahNumbers,
@@ -337,7 +337,7 @@ export async function graduateWords(surahNumber: number, newWordKeys: string[]):
   if (sanitized.length === 0) return
 
   // Add word cards only — the ayah card is created by graduateAyahs
-  await Promise.all(sanitized.map(key => addWordToQueue(user.id, key)))
+  await addWordsToQueue(user.id, sanitized)
 
   // Log learning activity for the calendar
   await logReviewActivityBatch(
@@ -362,7 +362,7 @@ export async function graduateAyahs(surahNumber: number, newAyahNumbers: number[
   )
   if (sanitized.length === 0) return
 
-  await Promise.all(sanitized.map(n => addAyahToQueue(user.id, surahNumber, n)))
+  await addAyahsToQueue(user.id, surahNumber, sanitized)
 
   // Log learning activity for the calendar
   await logReviewActivityBatch(

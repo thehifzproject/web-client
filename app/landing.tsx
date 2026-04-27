@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { ArrowLeft, ArrowRight } from 'lucide-react'
 
 export function LandingPage() {
@@ -26,13 +27,13 @@ export function LandingPage() {
       {/* Nav */}
       <nav className="lp-nav">
         <div className="lp-nav-left">
-          <img src="/logo-black.png" alt="" className="logo-icon" width={22} height={22} />
+          <Image src="/logo-black.png" alt="" className="logo-icon" width={22} height={22} />
           <span className="lp-nav-name">The Hifz Project</span>
         </div>
         <div className="lp-nav-right">
           <a href="#how" className="lp-nav-link">How it works</a>
           <a href="#science" className="lp-nav-link">The science</a>
-          <a href="#open" className="lp-nav-link">Open source</a>
+          <a href="#open" className="lp-nav-link">Pricing</a>
           <Link href="/auth/signup" className="lp-nav-cta">Get started</Link>
         </div>
       </nav>
@@ -148,41 +149,72 @@ export function LandingPage() {
         <FadeIn>
           <div className="lp-chart-card">
             <span className="lp-demo-label">Memory retention over time</span>
-            <svg viewBox="0 0 500 200" className="lp-chart">
+            <svg viewBox="0 0 500 210" className="lp-chart" role="img" aria-label="Memory retention chart comparing review vs no review over four months">
+              {/* Plot area: x=50..480 (Day 1 → Month 4), y=22 (100%) → 170 (0%) */}
+
               {/* Grid */}
-              <line x1="50" y1="20" x2="50" y2="170" stroke="var(--border)" strokeWidth="1" />
+              <line x1="50" y1="22" x2="50" y2="170" stroke="var(--border)" strokeWidth="1" />
               <line x1="50" y1="170" x2="480" y2="170" stroke="var(--border)" strokeWidth="1" />
-              <line x1="50" y1="95" x2="480" y2="95" stroke="var(--border)" strokeWidth="0.5" strokeDasharray="4" />
-              <line x1="50" y1="20" x2="480" y2="20" stroke="var(--border)" strokeWidth="0.5" strokeDasharray="4" />
+              <line x1="50" y1="96" x2="480" y2="96" stroke="var(--border)" strokeWidth="0.5" strokeDasharray="4" />
+              <line x1="50" y1="22" x2="480" y2="22" stroke="var(--border)" strokeWidth="0.5" strokeDasharray="4" />
+
               {/* Y labels */}
-              <text x="45" y="24" textAnchor="end" fill="var(--text-faint)" fontSize="9">100%</text>
-              <text x="45" y="99" textAnchor="end" fill="var(--text-faint)" fontSize="9">50%</text>
-              <text x="45" y="174" textAnchor="end" fill="var(--text-faint)" fontSize="9">0%</text>
-              {/* X labels */}
-              <text x="50" y="185" fill="var(--text-faint)" fontSize="8">Day 1</text>
-              <text x="155" y="185" fill="var(--text-faint)" fontSize="8">Day 3</text>
-              <text x="260" y="185" fill="var(--text-faint)" fontSize="8">Week 1</text>
-              <text x="365" y="185" fill="var(--text-faint)" fontSize="8">Month 1</text>
-              <text x="450" y="185" fill="var(--text-faint)" fontSize="8">Month 4</text>
-              {/* Without SRS */}
-              <path d="M50,20 C100,60 130,130 200,155 Q300,168 480,170" fill="none" stroke="var(--incorrect)" strokeWidth="2" opacity="0.5" />
-              <text x="200" y="148" fill="var(--incorrect)" fontSize="8" opacity="0.7">Without review</text>
-              {/* With SRS */}
-              <path d="M50,20 C70,50 80,70 100,80 L100,28 C120,50 130,65 155,72 L155,25 C175,42 190,55 220,60 L220,23 C260,35 290,45 340,48 L340,22 C380,30 420,35 480,38" fill="none" stroke="var(--teal)" strokeWidth="2.5" />
-              <text x="340" y="60" fill="var(--teal)" fontSize="8" fontWeight="600">With spaced repetition</text>
-              {/* Review dots */}
-              <circle cx="100" cy="28" r="3" fill="var(--teal)" />
-              <circle cx="155" cy="25" r="3" fill="var(--teal)" />
-              <circle cx="220" cy="23" r="3" fill="var(--teal)" />
-              <circle cx="340" cy="22" r="3" fill="var(--teal)" />
-              {/* Dot labels */}
-              <text x="100" y="16" textAnchor="middle" fill="var(--teal)" fontSize="7">4h</text>
-              <text x="155" y="16" textAnchor="middle" fill="var(--teal)" fontSize="7">1d</text>
-              <text x="220" y="16" textAnchor="middle" fill="var(--teal)" fontSize="7">1w</text>
-              <text x="340" y="16" textAnchor="middle" fill="var(--teal)" fontSize="7">1mo</text>
+              <text x="44" y="25" textAnchor="end" fill="var(--text-faint)" fontSize="9">100%</text>
+              <text x="44" y="99" textAnchor="end" fill="var(--text-faint)" fontSize="9">50%</text>
+              <text x="44" y="173" textAnchor="end" fill="var(--text-faint)" fontSize="9">0%</text>
+
+              {/* X labels — Day 1, Day 3, Week 1, Month 1, Month 4 */}
+              <text x="50" y="186" fill="var(--text-faint)" fontSize="8">Day 1</text>
+              <text x="155" y="186" textAnchor="middle" fill="var(--text-faint)" fontSize="8">Day 3</text>
+              <text x="260" y="186" textAnchor="middle" fill="var(--text-faint)" fontSize="8">Week 1</text>
+              <text x="365" y="186" textAnchor="middle" fill="var(--text-faint)" fontSize="8">Month 1</text>
+              <text x="475" y="186" textAnchor="end" fill="var(--text-faint)" fontSize="8">Month 4</text>
+
+              {/* "Without review" — Ebbinghaus-style fast forgetting, asymptote near 0% */}
+              <path
+                d="M50,22 Q72,32 105,80 Q138,148 195,162 Q290,170 480,170"
+                fill="none"
+                stroke="var(--incorrect)"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                opacity="0.7"
+              />
+              {/* Subtle fill under the forgetting curve to make the loss feel tangible */}
+              <path
+                d="M50,22 Q72,32 105,80 Q138,148 195,162 Q290,170 480,170 L480,170 L50,170 Z"
+                fill="var(--incorrect)"
+                opacity="0.05"
+              />
+
+              {/* "With spaced repetition" — gentle dip then snap back to 100% at each review.
+                   Decay between reviews shrinks each time (the "spacing effect"). */}
+              <polyline
+                points="50,22 99,52 100,22 154,42 155,22 219,36 220,22 339,30 340,22 480,28"
+                fill="none"
+                stroke="var(--teal)"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+
+              {/* Review markers (peaks) */}
+              <circle cx="100" cy="22" r="3.5" fill="var(--teal)" />
+              <circle cx="155" cy="22" r="3.5" fill="var(--teal)" />
+              <circle cx="220" cy="22" r="3.5" fill="var(--teal)" />
+              <circle cx="340" cy="22" r="3.5" fill="var(--teal)" />
+
+              {/* Review labels */}
+              <text x="100" y="14" textAnchor="middle" fill="var(--teal)" fontSize="8" fontWeight="700">4h</text>
+              <text x="155" y="14" textAnchor="middle" fill="var(--teal)" fontSize="8" fontWeight="700">1d</text>
+              <text x="220" y="14" textAnchor="middle" fill="var(--teal)" fontSize="8" fontWeight="700">1w</text>
+              <text x="340" y="14" textAnchor="middle" fill="var(--teal)" fontSize="8" fontWeight="700">1mo</text>
+
+              {/* End-state callouts at right edge */}
+              <text x="475" y="40" textAnchor="end" fill="var(--teal)" fontSize="10" fontWeight="700">~95% retained</text>
+              <text x="475" y="164" textAnchor="end" fill="var(--incorrect)" fontSize="9" fontWeight="600" opacity="0.85">~1% remembered</text>
             </svg>
             <div className="lp-chart-legend">
-              <span><span className="lp-legend-dot" style={{ background: 'var(--incorrect)', opacity: 0.5 }} /> Without review</span>
+              <span><span className="lp-legend-dot" style={{ background: 'var(--incorrect)', opacity: 0.7 }} /> Without review</span>
               <span><span className="lp-legend-dot" style={{ background: 'var(--teal)' }} /> With spaced repetition</span>
             </div>
           </div>
@@ -209,25 +241,41 @@ export function LandingPage() {
         </FadeIn>
       </section>
 
-      {/* Free & open source */}
+      {/* Pricing */}
       <section id="open" className="lp-section lp-section-center">
         <div className="lp-section-head">
           <span className="lp-label">Built for the ummah</span>
-          <h2 className="lp-h2">Free. Open source. Forever.</h2>
+          <h2 className="lp-h2">Free for everyone.</h2>
           <p className="lp-section-sub">
-            No ads. No subscriptions. No paywalls. No data selling.
-            The Quran belongs to everyone — the tools to learn it should too.
+            Memorizing every word, ayah, and surah — free, forever, no ads, no data selling.
+            The only paid feature is voice recitation, because the AI that transcribes your recitation
+            charges per recording. Everything else stays free.
           </p>
         </div>
+
         <FadeIn>
-          <a
-            href="https://github.com/thehifzproject/web-client"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="lp-gh-btn"
-          >
-            ⭐ Star us on GitHub
-          </a>
+          <div className="lp-pricing-row">
+            <div className="lp-tier-card lp-tier-free">
+              <span className="lp-tier-card-label">Free, forever</span>
+              <div className="lp-tier-card-price">$0</div>
+              <ul className="lp-tier-card-list">
+                <li>All 114 surahs, every word and ayah</li>
+                <li>Spaced repetition scheduling</li>
+                <li>Progress tracking and review calendar</li>
+                <li>Type your answers</li>
+              </ul>
+            </div>
+            <div className="lp-tier-card lp-tier-paid">
+              <span className="lp-tier-card-label">Voice add-on</span>
+              <div className="lp-tier-card-price">$5<span className="lp-tier-card-price-suffix">/mo</span></div>
+              <ul className="lp-tier-card-list">
+                <li>Speak your recitation instead of typing</li>
+                <li>Arabic transcription tuned for Quran</li>
+                <li>Covers our per-recording API costs</li>
+                <li>Cancel any time</li>
+              </ul>
+            </div>
+          </div>
         </FadeIn>
       </section>
 
@@ -246,10 +294,7 @@ export function LandingPage() {
 
       {/* Footer */}
       <footer className="lp-footer">
-        <span>The Hifz Project — open source</span>
-        <div className="lp-footer-links">
-          <a href="https://github.com/thehifzproject/web-client" target="_blank" rel="noopener noreferrer">GitHub</a>
-        </div>
+        <span>The Hifz Project</span>
       </footer>
 
       <style>{`
@@ -294,7 +339,10 @@ export function LandingPage() {
         .lp-step-desc { font-size:0.85rem; color:var(--text-muted); line-height:1.7; margin:0; }
 
         /* ── Demo cards ── */
-        .lp-demo { flex:1; background:var(--bg-card); border:1px solid var(--border); border-radius:1rem; padding:1.5rem; text-align:center; }
+        /* Flex column + justify-content:center keeps content vertically balanced
+           when min-height creates more space than the natural content needs. */
+        .lp-demo { flex:1; background:var(--bg-card); border:1px solid var(--border); border-radius:1rem; padding:1.5rem; text-align:center; box-sizing:border-box; min-height:340px; display:flex; flex-direction:column; justify-content:center; align-items:stretch; }
+        .lp-demo > * { flex-shrink:0; }
         .lp-demo-label { font-size:0.65rem; color:var(--text-faint); text-transform:uppercase; letter-spacing:0.08em; display:block; margin-bottom:0.75rem; font-weight:600; }
         .lp-demo-arabic { font-family:var(--font-amiri),serif; font-size:2.5rem; color:var(--text); direction:rtl; margin-bottom:0.5rem; line-height:1.4; }
         .lp-demo-translit { font-size:1rem; color:var(--text-muted); margin-bottom:0.5rem; }
@@ -328,9 +376,18 @@ export function LandingPage() {
         .lp-tier-arrow { color:var(--text-faint); line-height:2; font-size:0.8rem; }
         .lp-tiers-intervals { font-size:0.72rem; color:var(--text-faint); margin:0.75rem 0 0; }
 
-        /* ── Open source ── */
-        .lp-gh-btn { display:inline-flex; align-items:center; gap:0.5rem; padding:0.55rem 1.25rem; border:1px solid var(--border); border-radius:0.5rem; font-size:0.8rem; color:var(--text-muted); text-decoration:none; transition:border-color 0.15s,color 0.15s; }
-        .lp-gh-btn:hover { border-color:var(--teal); color:var(--teal); }
+        /* ── Pricing tiers ── */
+        .lp-pricing-row { display:grid; grid-template-columns:1fr 1fr; gap:1rem; max-width:640px; margin:0 auto; text-align:left; }
+        .lp-tier-card { background:var(--bg-card); border:1px solid var(--border); border-radius:1rem; padding:1.5rem 1.5rem 1.25rem; display:flex; flex-direction:column; gap:0.5rem; }
+        .lp-tier-paid { border-color:color-mix(in srgb,var(--teal) 35%,var(--border)); }
+        .lp-tier-card-label { font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-muted); font-weight:700; }
+        .lp-tier-paid .lp-tier-card-label { color:var(--teal); }
+        .lp-tier-card-price { font-family:var(--font-crimson),serif; font-size:2rem; font-weight:600; color:var(--text); line-height:1; }
+        .lp-tier-card-price-suffix { font-size:0.9rem; font-weight:500; color:var(--text-muted); margin-left:0.2rem; }
+        .lp-tier-card-list { list-style:none; padding:0; margin:0.5rem 0 0; display:flex; flex-direction:column; gap:0.4rem; }
+        .lp-tier-card-list li { font-size:0.82rem; color:var(--text-muted); line-height:1.5; padding-left:1.1rem; position:relative; }
+        .lp-tier-card-list li::before { content:""; position:absolute; left:0; top:0.5rem; width:6px; height:6px; border-radius:50%; background:var(--teal); opacity:0.5; }
+        .lp-tier-paid .lp-tier-card-list li::before { opacity:0.85; }
 
         /* ── Final CTA ── */
         .lp-final { padding-bottom:5rem; }
@@ -339,10 +396,7 @@ export function LandingPage() {
         .lp-signin-link:hover { text-decoration:underline; }
 
         /* ── Footer ── */
-        .lp-footer { position:relative; z-index:1; display:flex; justify-content:space-between; align-items:center; padding:1.5rem; border-top:1px solid var(--border); font-size:0.75rem; color:var(--text-faint); max-width:900px; margin:0 auto; }
-        .lp-footer-links { display:flex; gap:1rem; }
-        .lp-footer-links a { color:var(--text-faint); text-decoration:none; transition:color 0.15s; }
-        .lp-footer-links a:hover { color:var(--teal); }
+        .lp-footer { position:relative; z-index:1; display:flex; justify-content:center; align-items:center; padding:1.5rem; border-top:1px solid var(--border); font-size:0.75rem; color:var(--text-faint); max-width:900px; margin:0 auto; }
 
         /* ── Scroll fade-in ── */
         .lp-fade { opacity:0; transform:translateY(24px); transition:opacity 0.6s ease,transform 0.6s ease; }
@@ -353,10 +407,13 @@ export function LandingPage() {
           .lp-nav-link { display:none; }
           .lp-h1 { font-size:2rem; }
           .lp-hero { padding:3rem 1.25rem 2.5rem; }
-          .lp-step, .lp-step-reverse { flex-direction:column; gap:1.5rem; }
+          .lp-step, .lp-step-reverse { flex-direction:column; gap:1.5rem; align-items:stretch; }
+          .lp-step-text { width:100%; }
+          .lp-demo { width:100%; max-width:360px; margin:0 auto; min-height:360px; }
           .lp-tiers { gap:0.3rem; }
           .lp-tier { font-size:0.65rem; padding:0.3rem 0.5rem; }
           .lp-tier-arrow { font-size:0.65rem; }
+          .lp-pricing-row { grid-template-columns:1fr; max-width:360px; }
         }
       `}</style>
     </div>

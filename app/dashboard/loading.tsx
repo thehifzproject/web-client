@@ -1,10 +1,12 @@
+import Image from 'next/image'
+
 export default function DashboardLoading() {
   return (
     <div style={{ minHeight: '100dvh', background: 'var(--bg-base)' }}>
       {/* Nav skeleton */}
       <nav style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem 1.5rem', borderBottom: '1px solid var(--border)', background: 'var(--bg-raised)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <img src="/logo-black.png" alt="" className="logo-icon" width={20} height={20} />
+          <Image src="/logo-black.png" alt="" className="logo-icon" width={20} height={20} />
           <span style={{ fontFamily: 'var(--font-crimson),serif', fontSize: '1.05rem', fontWeight: 600, color: 'var(--text)' }}>The Hifz Project</span>
         </div>
         <div style={{ display: 'flex', gap: '1rem' }}>

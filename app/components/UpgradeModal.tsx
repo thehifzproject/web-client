@@ -6,17 +6,23 @@ import { X } from 'lucide-react'
 
 export function UpgradeModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [loading, setLoading] = useState(false)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
   if (!open) return null
 
   async function handleUpgrade() {
     setLoading(true)
+    setErrorMsg(null)
     const returnTo = window.location.pathname + window.location.search
     const res = await createCheckoutSession(returnTo)
     if ('url' in res) {
       window.location.href = res.url
     } else {
       setLoading(false)
-      alert('Could not start checkout. Try again.')
+      setErrorMsg(
+        res.error === 'already_subscribed' ? "You're already subscribed." :
+        res.error === 'unauthorized' ? 'Please sign in again.' :
+        'Could not start checkout. Try again.'
+      )
     }
   }
 
@@ -33,6 +39,11 @@ export function UpgradeModal({ open, onClose }: { open: boolean; onClose: () => 
           <li>Works on transliteration, ayah recitation, and surah chains</li>
           <li>Cancel any time</li>
         </ul>
+        {errorMsg && (
+          <p style={{ color: 'var(--incorrect)', fontSize: '0.85rem', textAlign: 'center', margin: '0.25rem 0 0.5rem' }}>
+            {errorMsg}
+          </p>
+        )}
         <button className="btn btn-primary" disabled={loading} onClick={handleUpgrade}>
           {loading ? 'Opening…' : 'Upgrade — $5/month'}
         </button>

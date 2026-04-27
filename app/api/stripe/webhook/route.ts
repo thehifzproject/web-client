@@ -82,7 +82,11 @@ export async function POST(req: NextRequest) {
       }
       case 'invoice.payment_failed': {
         const invoice = event.data.object as Stripe.Invoice
-        const subField = (invoice as any).subscription
+        // Older API versions expose `subscription` directly on Invoice; newer ones
+        // moved it under `parent.subscription_details.subscription`. Handle both.
+        const subField =
+          (invoice as { subscription?: string | Stripe.Subscription }).subscription ??
+          invoice.parent?.subscription_details?.subscription
         if (subField) {
           const subId = typeof subField === 'string' ? subField : subField.id
           const sub = await stripe.subscriptions.retrieve(subId)

@@ -54,6 +54,12 @@ export default function ReviewPage() {
     if (!loading && !showResult && inputRef.current) inputRef.current.focus()
   }, [index, loading, showResult])
 
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+  useEffect(() => () => {
+    audioRef.current?.pause()
+    audioRef.current = null
+  }, [])
+
   const card = cards[index]
 
   function checkCurrentAnswer() {
@@ -160,7 +166,6 @@ export default function ReviewPage() {
     }
   }
 
-  const audioRef = useRef<HTMLAudioElement | null>(null)
   function playAudio(url?: string) {
     if (!url) return
     if (audioRef.current) { audioRef.current.pause(); audioRef.current = null }

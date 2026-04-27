@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { graduatedCardRow, preloadedCardRow, gradeCardRow, stageToTier } from '@/lib/srs'
+import { graduatedCardRow, gradeCardRow, stageToTier } from '@/lib/srs'
 
 // ─── Word Cards ───────────────────────────────────────────────────────────────
 
@@ -13,7 +13,7 @@ export async function getWordQueueStatus(userId: string, wordKey: string): Promi
     .eq('user_id', userId)
     .eq('word_key', wordKey)
     .eq('card_type', 'transliteration')
-    .single()
+    .maybeSingle()
 
   if (!data) return null
   if (data.srs_stage === 0) return 'new'
@@ -21,32 +21,22 @@ export async function getWordQueueStatus(userId: string, wordKey: string): Promi
   return 'review'
 }
 
-export async function addWordToQueue(userId: string, wordKey: string): Promise<void> {
+export async function addWordsToQueue(userId: string, wordKeys: string[]): Promise<void> {
+  if (wordKeys.length === 0) return
   const supabase = await createClient()
   const base = graduatedCardRow()
 
-  await supabase.from('word_cards').upsert(
+  const rows = wordKeys.flatMap(wordKey =>
     ['transliteration', 'meaning'].map(cardType => ({
       user_id: userId,
       word_key: wordKey,
       card_type: cardType,
       ...base,
-    })),
-    { onConflict: 'user_id,word_key,card_type', ignoreDuplicates: true }
+    }))
   )
-}
-
-export async function addWordToQueuePreloaded(userId: string, wordKey: string): Promise<void> {
-  const supabase = await createClient()
-  const base = preloadedCardRow()
 
   await supabase.from('word_cards').upsert(
-    ['transliteration', 'meaning'].map(cardType => ({
-      user_id: userId,
-      word_key: wordKey,
-      card_type: cardType,
-      ...base,
-    })),
+    rows,
     { onConflict: 'user_id,word_key,card_type', ignoreDuplicates: true }
   )
 }
@@ -64,42 +54,27 @@ export async function getQueuedWordKeys(userId: string): Promise<Set<string>> {
 
 // ─── Ayah Cards ───────────────────────────────────────────────────────────────
 
-export async function addAyahToQueue(
+export async function addAyahsToQueue(
   userId: string,
   surahNumber: number,
-  ayahNumber: number
+  ayahNumbers: number[],
 ): Promise<void> {
+  if (ayahNumbers.length === 0) return
   const supabase = await createClient()
   const base = graduatedCardRow()
 
-  await supabase.from('ayah_cards').upsert(
+  const rows = ayahNumbers.flatMap(ayahNumber =>
     ['identify', 'recite'].map(cardType => ({
       user_id: userId,
       surah_number: surahNumber,
       ayah_number: ayahNumber,
       card_type: cardType,
       ...base,
-    })),
-    { onConflict: 'user_id,surah_number,ayah_number,card_type', ignoreDuplicates: true }
+    }))
   )
-}
-
-export async function addAyahToQueuePreloaded(
-  userId: string,
-  surahNumber: number,
-  ayahNumber: number,
-): Promise<void> {
-  const supabase = await createClient()
-  const base = preloadedCardRow()
 
   await supabase.from('ayah_cards').upsert(
-    ['identify', 'recite'].map(cardType => ({
-      user_id: userId,
-      surah_number: surahNumber,
-      ayah_number: ayahNumber,
-      card_type: cardType,
-      ...base,
-    })),
+    rows,
     { onConflict: 'user_id,surah_number,ayah_number,card_type', ignoreDuplicates: true }
   )
 }
@@ -131,16 +106,6 @@ export async function addSurahToQueue(userId: string, surahNumber: number): Prom
   )
 }
 
-export async function addSurahToQueuePreloaded(userId: string, surahNumber: number): Promise<void> {
-  const supabase = await createClient()
-  const base = preloadedCardRow()
-
-  await supabase.from('surah_cards').upsert(
-    { user_id: userId, surah_number: surahNumber, ...base },
-    { onConflict: 'user_id,surah_number', ignoreDuplicates: true }
-  )
-}
-
 export async function isSurahQueued(userId: string, surahNumber: number): Promise<boolean> {
   const supabase = await createClient()
   const { data } = await supabase
@@ -148,58 +113,53 @@ export async function isSurahQueued(userId: string, surahNumber: number): Promis
     .select('id')
     .eq('user_id', userId)
     .eq('surah_number', surahNumber)
-    .single()
+    .maybeSingle()
   return !!data
 }
 
 // ─── Review / SRS Grading ────────────────────────────────────────────────────
 
-export async function gradeWordCard(userId: string, cardId: string, correct: boolean): Promise<void> {
-  const supabase = await createClient()
-  const { data } = await supabase
-    .from('word_cards')
-    .select('srs_stage')
-    .eq('id', cardId)
-    .eq('user_id', userId)
-    .single()
-  if (!data) return
+// Grading is read-modify-write. To keep two near-simultaneous grades on the
+// same card from clobbering each other (we'd lose one stage advance), the
+// UPDATE pins srs_stage to the value we read. If a concurrent grade landed
+// first, the WHERE matches zero rows; we re-read and try once more.
+type CardTable = 'word_cards' | 'ayah_cards' | 'surah_cards'
 
-  const next = gradeCardRow(data.srs_stage, correct)
-  await supabase.from('word_cards')
-    .update({ ...next, last_review: new Date().toISOString() })
-    .eq('id', cardId).eq('user_id', userId)
+async function gradeCard(table: CardTable, userId: string, cardId: string, correct: boolean): Promise<void> {
+  const supabase = await createClient()
+
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const { data } = await supabase
+      .from(table)
+      .select('srs_stage')
+      .eq('id', cardId)
+      .eq('user_id', userId)
+      .maybeSingle()
+    if (!data) return
+
+    const next = gradeCardRow(data.srs_stage, correct)
+    const { data: updated } = await supabase
+      .from(table)
+      .update({ ...next, last_review: new Date().toISOString() })
+      .eq('id', cardId)
+      .eq('user_id', userId)
+      .eq('srs_stage', data.srs_stage)
+      .select('id')
+      .maybeSingle()
+    if (updated) return
+  }
 }
 
-export async function gradeAyahCard(userId: string, cardId: string, correct: boolean): Promise<void> {
-  const supabase = await createClient()
-  const { data } = await supabase
-    .from('ayah_cards')
-    .select('srs_stage')
-    .eq('id', cardId)
-    .eq('user_id', userId)
-    .single()
-  if (!data) return
-
-  const next = gradeCardRow(data.srs_stage, correct)
-  await supabase.from('ayah_cards')
-    .update({ ...next, last_review: new Date().toISOString() })
-    .eq('id', cardId).eq('user_id', userId)
+export function gradeWordCard(userId: string, cardId: string, correct: boolean): Promise<void> {
+  return gradeCard('word_cards', userId, cardId, correct)
 }
 
-export async function gradeSurahCard(userId: string, cardId: string, correct: boolean): Promise<void> {
-  const supabase = await createClient()
-  const { data } = await supabase
-    .from('surah_cards')
-    .select('srs_stage')
-    .eq('id', cardId)
-    .eq('user_id', userId)
-    .single()
-  if (!data) return
+export function gradeAyahCard(userId: string, cardId: string, correct: boolean): Promise<void> {
+  return gradeCard('ayah_cards', userId, cardId, correct)
+}
 
-  const next = gradeCardRow(data.srs_stage, correct)
-  await supabase.from('surah_cards')
-    .update({ ...next, last_review: new Date().toISOString() })
-    .eq('id', cardId).eq('user_id', userId)
+export function gradeSurahCard(userId: string, cardId: string, correct: boolean): Promise<void> {
+  return gradeCard('surah_cards', userId, cardId, correct)
 }
 
 // ─── Review Log ──────────────────────────────────────────────────────────────
@@ -312,7 +272,7 @@ export async function getDailyLearningStatus(userId: string): Promise<DailyLearn
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString()
 
   const [prefs, wordsToday] = await Promise.all([
-    supabase.from('preferences').select('daily_new_words').eq('user_id', userId).single(),
+    supabase.from('preferences').select('daily_new_words').eq('user_id', userId).maybeSingle(),
     supabase
       .from('word_cards')
       .select('word_key', { count: 'exact', head: true })

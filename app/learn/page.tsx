@@ -33,12 +33,15 @@ interface TestItem {
 
 const MAX_RETRIES = 2
 
+// Module-scoped Web Audio resources so playAudio can be called from non-React
+// helpers (BrowseCard, TestCard) without prop-drilling. The component cleans
+// these up on unmount via stopAndCloseAudio().
 let audioCtx: AudioContext | null = null
 let currentSource: AudioBufferSourceNode | null = null
 function playAudio(url: string) {
   if (!url) return
   if (currentSource) { try { currentSource.stop() } catch {} currentSource = null }
-  if (!audioCtx) audioCtx = new AudioContext()
+  if (!audioCtx || audioCtx.state === 'closed') audioCtx = new AudioContext()
   fetch(url)
     .then(r => r.arrayBuffer())
     .then(buf => audioCtx!.decodeAudioData(buf))
@@ -50,6 +53,12 @@ function playAudio(url: string) {
       currentSource = src
     })
     .catch(() => {})
+}
+
+function stopAndCloseAudio() {
+  if (currentSource) { try { currentSource.stop() } catch {} currentSource = null }
+  if (audioCtx && audioCtx.state !== 'closed') audioCtx.close().catch(() => {})
+  audioCtx = null
 }
 
 function buildWordTests(words: WordItem[]): TestItem[] {
@@ -166,6 +175,7 @@ export default function LearnPage() {
       }
     }
     load()
+    return () => stopAndCloseAudio()
   }, [])
 
   const currentTestId = testQueue[0]?.id

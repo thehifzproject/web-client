@@ -48,6 +48,7 @@ export default function OnboardingPage() {
   const [knowsFatihah, setKnowsFatihah] = useState<boolean | null>(null)
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [isPending, startTransition] = useTransition()
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
   const [selectedPace, setSelectedPace] = useState(2) // index into PACE_OPTIONS
   const [openJuz, setOpenJuz] = useState<Set<number>>(new Set())
@@ -120,8 +121,14 @@ export default function OnboardingPage() {
     if (knowsFatihah && !knownList.includes(1)) knownList.push(1)
 
     startTransition(async () => {
+      setSubmitError(null)
       setStep('processing')
-      await completeOnboarding(knownList, knowsFatihah, computedDailyWords)
+      const res = await completeOnboarding(knownList, knowsFatihah, computedDailyWords)
+      if (res?.error) {
+        // Server action redirects on success, so reaching this branch means it failed
+        setSubmitError(res.error)
+        setStep('pace')
+      }
     })
   }
 
@@ -304,6 +311,12 @@ export default function OnboardingPage() {
               Based on ~{TOTAL_UNIQUE_WORDS.toLocaleString()} unique words in the Quran
             </span>
           </div>
+
+          {submitError && (
+            <p style={{ color: 'var(--incorrect)', fontSize: '0.85rem', textAlign: 'center', margin: '0.5rem 0 0' }}>
+              {submitError}
+            </p>
+          )}
 
           <button className="btn-primary" onClick={handleFinish}>
             Start Learning
