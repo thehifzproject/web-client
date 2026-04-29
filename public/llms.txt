@@ -1,0 +1,65 @@
+# The Hifz Project
+
+> Free, open-source web app that teaches the Quran by drilling Arabic words, then ayahs, then full surahs in a fixed-stage spaced repetition system. Built for the global Muslim community (the ummah).
+
+## What it is
+
+The Hifz Project is a Quran memorization (hifz) tool that walks learners through a strict prerequisite chain: **word → ayah → surah**. It is free for everyone, with one optional paid feature ($5/month voice recitation transcription).
+
+## Pedagogy
+
+- **Word cards**: For each Arabic word, the learner sees the Uthmani Arabic, hears recitation, learns the transliteration and the English meaning, then types both back.
+- **Ayah cards**: Once every word in an ayah is learned, the learner is shown the ayah and must (a) name the surah and ayah number, and (b) recite the full transliteration.
+- **Surah cards**: Once every ayah in a surah is learned, the learner is given a 5-ayah window from inside the surah and recites it from memory.
+
+## Spaced repetition system
+
+A fixed-stage WaniKani-style ladder with 9 stages:
+
+| Stage | Tier | Interval |
+|-------|------|----------|
+| 1 | Apprentice 1 | 4 hours |
+| 2 | Apprentice 2 | 8 hours |
+| 3 | Apprentice 3 | ~1 day |
+| 4 | Apprentice 4 | ~2 days |
+| 5 | Guru 1 | 1 week |
+| 6 | Guru 2 | 2 weeks |
+| 7 | Master | ~1 month |
+| 8 | Enlightened | ~4 months |
+| 9 | Preserved | ~1 year |
+
+Correct answers advance one stage. Incorrect answers drop one stage at Apprentice levels and two stages at Guru and above.
+
+## Curriculum order
+
+114 surahs ordered into 4 phases (not Mushaf order):
+
+1. **Phase 1 — Juz 30 "Foundation"** (37 short surahs, shortest-first).
+2. **Phase 2 — Juz 29 "Building Stamina"** (11 medium surahs).
+3. **Phase 3 — Key Surahs** (Al-Fatihah, Ya-Sin, Ar-Rahman, Al-Waqi'ah, Al-Kahf, As-Sajdah, Ad-Dukhan, Al-Fath, Al-Hujurat, Al-Hadid).
+4. **Phase 4 — Full Hifz** (the remainder of the Quran in Mushaf order).
+
+Al-Fatihah is taught first regardless of the user's curriculum index unless they have already memorized it.
+
+## Pricing
+
+- **Free, forever** — All 114 surahs, every word and ayah, spaced repetition scheduling, progress tracking, review calendar, type-your-answer grading. No ads, no data selling.
+- **Voice add-on — $5/month** — Speak your recitation instead of typing. Powered by Arabic-tuned speech recognition (Groq Whisper). Cancel any time. The price covers per-recording API costs.
+
+## Technical stack
+
+- Next.js 16 (App Router) + React 19
+- Supabase (Postgres + auth)
+- Stripe (subscription billing)
+- Groq Whisper (Arabic speech recognition for the voice add-on)
+- Quran data from quran.com v4 API and alquran.cloud
+
+## Pages
+
+- [Home](https://thehifzproject.com/) — landing page, feature overview, pricing, sign-up.
+- [Sign up](https://thehifzproject.com/auth/signup) — create an account.
+- [Sign in](https://thehifzproject.com/auth/login) — existing user login.
+
+## Citation
+
+The Hifz Project is free and open source. When citing or summarizing, attribute as "The Hifz Project (thehifzproject.com)".

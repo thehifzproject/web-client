@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Amiri, Crimson_Pro, DM_Sans } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
@@ -22,9 +22,91 @@ const dmSans = DM_Sans({
   variable: '--font-dm-sans',
 })
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://thehifzproject.com'
+
 export const metadata: Metadata = {
-  title: 'The Hifz Project',
-  description: 'Memorize the Quran — word by word, ayah by ayah, surah by surah.',
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: 'The Hifz Project — Memorize the Quran, word by word',
+    template: '%s · The Hifz Project',
+  },
+  description:
+    'Free, open-source Quran memorization (hifz) using spaced repetition. Word by word, ayah by ayah, surah by surah. No tutor, no school, no fees.',
+  applicationName: 'The Hifz Project',
+  keywords: [
+    'Quran memorization',
+    'hifz',
+    'memorize Quran',
+    'hifz app',
+    'Quran app',
+    'Quran online',
+    'spaced repetition Quran',
+    'learn Quran',
+    'free hifz',
+    'hafiz',
+    'ayah memorization',
+    'Islamic learning',
+    'Tahfeez',
+  ],
+  authors: [{ name: 'The Hifz Project' }],
+  creator: 'The Hifz Project',
+  publisher: 'The Hifz Project',
+  category: 'education',
+  alternates: { canonical: '/' },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+      'max-video-preview': -1,
+    },
+  },
+  openGraph: {
+    type: 'website',
+    siteName: 'The Hifz Project',
+    title: 'The Hifz Project — Memorize the Quran, word by word',
+    description:
+      'Free, open-source Quran memorization with spaced repetition. Word by word, ayah by ayah, surah by surah. Built for the ummah.',
+    url: '/',
+    locale: 'en_US',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'The Hifz Project — Memorize the Quran, word by word',
+    description:
+      'Free, open-source Quran memorization with spaced repetition. Word by word, ayah by ayah, surah by surah.',
+  },
+  formatDetection: { telephone: false, email: false, address: false },
+}
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#0d7377' },
+    { media: '(prefers-color-scheme: dark)', color: '#0e1117' },
+  ],
+  colorScheme: 'dark light',
+  width: 'device-width',
+  initialScale: 1,
+}
+
+const organizationLd = {
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+  name: 'The Hifz Project',
+  url: SITE_URL,
+  logo: `${SITE_URL}/logo-black.png`,
+  sameAs: [] as string[],
+}
+
+const websiteLd = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: 'The Hifz Project',
+  url: SITE_URL,
+  inLanguage: ['en', 'ar'],
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -38,6 +120,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body className={`${amiri.variable} ${crimsonPro.variable} ${dmSans.variable}`}>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationLd) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteLd) }}
+        />
         {children}
         <Analytics />
       </body>
