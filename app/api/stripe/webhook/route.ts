@@ -15,34 +15,43 @@ function extractPeriodEnd(sub: Stripe.Subscription): string | null {
   return new Date(unix * 1000).toISOString()
 }
 
-async function upsertFromSubscription(sub: Stripe.Subscription) {
+async function upsertFromSubscription(sub: Stripe.Subscription, eventCreated: number) {
   const admin = createAdminClient()
   const customerId = typeof sub.customer === 'string' ? sub.customer : sub.customer.id
 
   const { data: row } = await admin
     .from('subscriptions')
-    .select('user_id')
+    .select('user_id, updated_at')
     .eq('stripe_customer_id', customerId)
     .maybeSingle()
   if (!row) {
-    console.warn('stripe webhook: no subscriptions row for customer', customerId)
+    console.warn('stripe webhook: no subscriptions row for customer')
     return
   }
+
+  // Drop events older than the row we have. Stripe can deliver
+  // subscription.* events out of order; without this guard a stale "active →
+  // canceled" arriving after a fresh "canceled → active" would silently
+  // revert the user's status.
+  if (row.updated_at && new Date(row.updated_at).getTime() > eventCreated * 1000) {
+    return
+  }
+
+  const periodEnd = extractPeriodEnd(sub)
 
   const { error } = await admin.from('subscriptions').upsert({
     user_id: row.user_id,
     stripe_customer_id: customerId,
     stripe_subscription_id: sub.id,
     status: sub.status,
-    current_period_end: extractPeriodEnd(sub),
+    current_period_end: periodEnd,
     cancel_at_period_end: sub.cancel_at_period_end,
-    updated_at: new Date().toISOString(),
+    updated_at: new Date(eventCreated * 1000).toISOString(),
   })
   if (error) {
-    console.error('stripe webhook: upsert failed', { customerId, status: sub.status, error })
+    console.error('stripe webhook: upsert failed', error.message)
     throw error
   }
-  console.log('stripe webhook: synced subscription', { customerId, status: sub.status })
 }
 
 export async function POST(req: NextRequest) {
@@ -62,6 +71,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'signature_invalid' }, { status: 400 })
   }
 
+  // Idempotency: every Stripe event has a unique id; record it so retries
+  // (and any replay of a still-valid signed payload) become no-ops.
+  const admin = createAdminClient()
+  const { error: dedupeError } = await admin
+    .from('webhook_events')
+    .insert({ event_id: event.id, type: event.type })
+  if (dedupeError) {
+    // Unique-violation = we've already processed this event. Ack with 200 so
+    // Stripe stops retrying.
+    if (dedupeError.code === '23505') {
+      return NextResponse.json({ received: true, deduped: true })
+    }
+    console.error('stripe webhook: dedupe insert failed', dedupeError.message)
+    return NextResponse.json({ error: 'internal' }, { status: 500 })
+  }
+
   try {
     switch (event.type) {
       case 'checkout.session.completed': {
@@ -71,13 +96,14 @@ export async function POST(req: NextRequest) {
             ? session.subscription
             : session.subscription.id
           const sub = await stripe.subscriptions.retrieve(subId)
-          await upsertFromSubscription(sub)
+          await upsertFromSubscription(sub, event.created)
         }
         break
       }
+      case 'customer.subscription.created':
       case 'customer.subscription.updated':
       case 'customer.subscription.deleted': {
-        await upsertFromSubscription(event.data.object as Stripe.Subscription)
+        await upsertFromSubscription(event.data.object as Stripe.Subscription, event.created)
         break
       }
       case 'invoice.payment_failed': {
@@ -90,14 +116,14 @@ export async function POST(req: NextRequest) {
         if (subField) {
           const subId = typeof subField === 'string' ? subField : subField.id
           const sub = await stripe.subscriptions.retrieve(subId)
-          await upsertFromSubscription(sub)
+          await upsertFromSubscription(sub, event.created)
         }
         break
       }
     }
     return NextResponse.json({ received: true })
   } catch (err) {
-    console.error('stripe webhook error', err)
+    console.error('stripe webhook error', err instanceof Error ? err.message : err)
     return NextResponse.json({ error: 'internal' }, { status: 500 })
   }
 }

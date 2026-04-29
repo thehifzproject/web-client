@@ -79,7 +79,7 @@ export async function getLearnSessionData(): Promise<LearnSessionData | null> {
     .from('user_curriculum_progress')
     .select('curriculum_index')
     .eq('user_id', user.id)
-    .single()
+    .maybeSingle()
 
   const curriculumIndex = progress?.curriculum_index ?? 0
   const entry = CURRICULUM[curriculumIndex]
@@ -95,7 +95,7 @@ export async function getLearnSessionData(): Promise<LearnSessionData | null> {
   if (entry.surahNumber !== 1) {
     const [fatihahQueued, { data: knownFatihah }] = await Promise.all([
       isSurahQueued(user.id, 1),
-      supabase.from('known_surahs').select('surah_number').eq('user_id', user.id).eq('surah_number', 1).single(),
+      supabase.from('known_surahs').select('surah_number').eq('user_id', user.id).eq('surah_number', 1).maybeSingle(),
     ])
     if (!fatihahQueued && !knownFatihah) {
       effectiveSurahNumber = 1

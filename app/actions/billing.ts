@@ -134,7 +134,8 @@ export async function syncSubscriptionFromStripe(): Promise<{ active: boolean; e
 
   const active =
     ['active', 'trialing'].includes(sub.status) &&
-    (!periodEnd || new Date(periodEnd) > new Date())
+    !!periodEnd &&
+    new Date(periodEnd) > new Date()
   return { active }
 }
 

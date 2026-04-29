@@ -19,7 +19,7 @@ const DIACRITIC_MAP: Record<string, string> = {
   '\u2018': '', '\u2019': '', '\u201C': '', '\u201D': '', '\u02BC': '',
 }
 
-export function removeDiacritics(text: string): string {
+function removeDiacritics(text: string): string {
   for (const [char, replacement] of Object.entries(DIACRITIC_MAP)) {
     text = text.split(char).join(replacement)
   }

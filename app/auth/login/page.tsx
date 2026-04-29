@@ -1,19 +1,32 @@
 'use client'
 
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { ArrowLeft, Eye, EyeOff, Loader2 } from 'lucide-react'
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginPageInner />
+    </Suspense>
+  )
+}
+
+function LoginPageInner() {
   const router = useRouter()
+  const params = useSearchParams()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  const notice = params.get('error') === 'verify_email'
+    ? 'Please verify your email to continue. Check your inbox for the confirmation link.'
+    : ''
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -103,6 +116,7 @@ export default function LoginPage() {
             </div>
           </div>
 
+          {notice && <p className="auth-notice">{notice}</p>}
           {error && <p className="auth-error">{error}</p>}
 
           <button type="submit" className="btn-primary" disabled={loading}>
@@ -232,6 +246,13 @@ export default function LoginPage() {
           font-size: 0.85rem;
           color: var(--incorrect);
           background: color-mix(in srgb, var(--incorrect) 10%, transparent);
+          border-radius: 0.5rem;
+          padding: 0.5rem 0.75rem;
+        }
+        .auth-notice {
+          font-size: 0.85rem;
+          color: var(--teal);
+          background: color-mix(in srgb, var(--teal) 10%, transparent);
           border-radius: 0.5rem;
           padding: 0.5rem 0.75rem;
         }

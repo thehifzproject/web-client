@@ -12,7 +12,7 @@ async function getCached<T>(key: string): Promise<T | null> {
     .from('quran_cache')
     .select('data, expires_at')
     .eq('cache_key', key)
-    .single()
+    .maybeSingle()
 
   if (!data) return null
   if (new Date(data.expires_at) < new Date()) return null

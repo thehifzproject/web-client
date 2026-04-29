@@ -41,8 +41,8 @@ export default function SettingsPage() {
       setEmail(user.email ?? '')
 
       const [{ data: profile }, { data: prefs }, wordCount] = await Promise.all([
-        supabase.from('profiles').select('display_name').eq('id', user.id).single(),
-        supabase.from('preferences').select('daily_new_words').eq('user_id', user.id).single(),
+        supabase.from('profiles').select('display_name').eq('id', user.id).maybeSingle(),
+        supabase.from('preferences').select('daily_new_words').eq('user_id', user.id).maybeSingle(),
         supabase.from('word_cards').select('word_key', { count: 'exact', head: true }).eq('user_id', user.id).eq('card_type', 'transliteration'),
       ])
       setDisplayName(profile?.display_name ?? '')

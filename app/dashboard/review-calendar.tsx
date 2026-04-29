@@ -2,12 +2,9 @@
 
 import { useState, useCallback, useMemo } from 'react'
 import type { ReviewSchedule } from '@/lib/cards'
+import { localDateStr } from '@/lib/dates'
 
 const DOW_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
-
-function localDateStr(d: Date) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
 
 // Aggregate raw timestamps into per-day buckets using the browser's local
 // timezone. Kept on the client so users in any tz see "today" as their today.

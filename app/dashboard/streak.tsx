@@ -2,10 +2,7 @@
 
 import { useMemo } from 'react'
 import { Flame } from 'lucide-react'
-
-function localDateStr(d: Date) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
+import { localDateStr } from '@/lib/dates'
 
 function computeStreak(pastReviews: string[]): number {
   if (pastReviews.length === 0) return 0

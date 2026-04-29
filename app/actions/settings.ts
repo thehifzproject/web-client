@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getStripe } from '@/lib/stripe'
 import { redirect } from 'next/navigation'
 
 // ─── Profile ────────────────────────────────────────────────────────────────
@@ -109,7 +110,8 @@ export async function getSubscriptionStatus(): Promise<SubscriptionStatus> {
 
   const active =
     ['active', 'trialing'].includes(data.status) &&
-    (!data.current_period_end || new Date(data.current_period_end) > new Date())
+    !!data.current_period_end &&
+    new Date(data.current_period_end) > new Date()
 
   return {
     active,
@@ -126,12 +128,35 @@ export async function deleteAccount(): Promise<{ error?: string }> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Not authenticated' }
 
+  const admin = createAdminClient()
+
+  // Cancel any Stripe subscription before deleting — otherwise the user gets
+  // billed forever for an account that no longer exists. Best-effort: a
+  // failure here shouldn't block deletion.
+  try {
+    const { data: sub } = await admin
+      .from('subscriptions')
+      .select('stripe_subscription_id')
+      .eq('user_id', user.id)
+      .maybeSingle()
+    if (sub?.stripe_subscription_id) {
+      const stripe = getStripe()
+      await stripe.subscriptions.cancel(sub.stripe_subscription_id).catch(() => {})
+    }
+  } catch (err) {
+    console.error('deleteAccount: stripe cancel failed', err instanceof Error ? err.message : err)
+  }
+
   // Delete the auth user via service-role admin; the CASCADE on
   // auth.users FK removes profiles/preferences/known_surahs/cards/etc.
-  const admin = createAdminClient()
   const { error } = await admin.auth.admin.deleteUser(user.id)
   if (error) return { error: error.message }
 
-  await supabase.auth.signOut()
+  // Best-effort cookie clear. The user is gone, so the JWT is now stale;
+  // signOut may throw because the session row was cascaded. We don't want
+  // that to break the redirect — the proxy will treat the stale cookie as
+  // logged-out on the next request anyway.
+  try { await supabase.auth.signOut() } catch {}
+
   redirect('/auth/login')
 }

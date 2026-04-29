@@ -11,6 +11,10 @@ export async function hasActiveSubscription(userId: string): Promise<boolean> {
 
   if (!data) return false
   if (!['active', 'trialing'].includes(data.status)) return false
-  if (data.current_period_end && new Date(data.current_period_end) < new Date()) return false
+  // An active/trialing subscription should always have a period end. If it's
+  // missing the Stripe sync is in a weird state — fail closed rather than
+  // grant indefinite access.
+  if (!data.current_period_end) return false
+  if (new Date(data.current_period_end) < new Date()) return false
   return true
 }

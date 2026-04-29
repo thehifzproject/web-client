@@ -6,6 +6,7 @@ import { BookOpen, RefreshCw, Lock, Settings } from 'lucide-react'
 import { getDueCount, getTierCounts, getQueuedWordKeys, getQueuedAyahNumbers, isSurahQueued, getReviewSchedule, getDailyLearningStatus } from '@/lib/cards'
 import { ReviewCalendar } from './review-calendar'
 import { Streak } from './streak'
+import { Greeting } from './greeting'
 import { CURRICULUM, getPhaseLabel, AVG_WORDS_PER_AYAH } from '@/lib/curriculum'
 import { getChapterWords } from '@/lib/quran/cache'
 
@@ -23,10 +24,10 @@ export default async function DashboardPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/auth/login')
 
-  const { data: profile } = await supabase.from('profiles').select('display_name, onboarding_complete').eq('id', user.id).single()
+  const { data: profile } = await supabase.from('profiles').select('display_name, onboarding_complete').eq('id', user.id).maybeSingle()
   if (!profile?.onboarding_complete) redirect('/onboarding')
 
-  const { data: progress } = await supabase.from('user_curriculum_progress').select('curriculum_index').eq('user_id', user.id).single()
+  const { data: progress } = await supabase.from('user_curriculum_progress').select('curriculum_index').eq('user_id', user.id).maybeSingle()
   const curriculumIndex = progress?.curriculum_index ?? 0
   const currentEntry = CURRICULUM[curriculumIndex]
 
@@ -42,7 +43,7 @@ export default async function DashboardPage() {
   if (currentEntry && currentEntry.surahNumber !== 1) {
     const [fatihahQueued, { data: knownFatihah }] = await Promise.all([
       isSurahQueued(user.id, 1),
-      supabase.from('known_surahs').select('surah_number').eq('user_id', user.id).eq('surah_number', 1).single(),
+      supabase.from('known_surahs').select('surah_number').eq('user_id', user.id).eq('surah_number', 1).maybeSingle(),
     ])
     if (!fatihahQueued && !knownFatihah) {
       effectiveEntry = { surahNumber: 1, name: 'Al-Fatihah', englishName: 'The Opening', ayahCount: 7, phase: 3 }
@@ -77,8 +78,6 @@ export default async function DashboardPage() {
 
   const estimatedAyahs = Math.floor(dailyLearn.wordsAvailable / avgWordsPerAyah)
   const firstName = profile?.display_name?.split(' ')[0] ?? 'there'
-  const hour = new Date().getHours()
-  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
   const totalItems = Object.values(tiers).reduce((a, b) => a + b, 0)
 
   return (
@@ -97,7 +96,7 @@ export default async function DashboardPage() {
       <div className="dash-layout">
         {/* ── Left column ── */}
         <main className="dash-main">
-          <h1 className="dash-greeting">{greeting}, {firstName}.</h1>
+          <Greeting firstName={firstName} />
 
           <div className="action-row">
             <Link href="/learn" className="action-btn action-learn">

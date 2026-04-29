@@ -31,14 +31,20 @@ export async function proxy(request: NextRequest) {
   const isAuthRoute = pathname.startsWith('/auth')
   // These routes must not redirect — callback sets the session, verified is the "close this tab" page
   const isAuthPassthrough = pathname === '/auth/callback' || pathname === '/auth/verified'
+  const isVerified = !!user?.email_confirmed_at
 
   // Not logged in → send to login (except auth routes and landing page)
   if (!user && !isAuthRoute && pathname !== '/') {
     return NextResponse.redirect(new URL('/auth/login', request.url))
   }
 
-  // Logged in + on a regular auth route (login/signup) → send to dashboard
-  if (user && isAuthRoute && !isAuthPassthrough) {
+  // Logged in but email not verified → keep on login page with a hint
+  if (user && !isVerified && !isAuthRoute && pathname !== '/') {
+    return NextResponse.redirect(new URL('/auth/login?error=verify_email', request.url))
+  }
+
+  // Logged in + verified + on a regular auth route (login/signup) → send to dashboard
+  if (user && isVerified && isAuthRoute && !isAuthPassthrough) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
@@ -46,5 +52,7 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
+  // /api routes (notably the Stripe webhook) must not pass through this guard —
+  // they have no session, and a redirect would break webhook delivery.
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
 }

@@ -3,24 +3,6 @@ import { graduatedCardRow, gradeCardRow, stageToTier } from '@/lib/srs'
 
 // ─── Word Cards ───────────────────────────────────────────────────────────────
 
-export type QueueStatus = 'new' | 'learning' | 'review' | null
-
-export async function getWordQueueStatus(userId: string, wordKey: string): Promise<QueueStatus> {
-  const supabase = await createClient()
-  const { data } = await supabase
-    .from('word_cards')
-    .select('srs_stage')
-    .eq('user_id', userId)
-    .eq('word_key', wordKey)
-    .eq('card_type', 'transliteration')
-    .maybeSingle()
-
-  if (!data) return null
-  if (data.srs_stage === 0) return 'new'
-  if (data.srs_stage <= 4) return 'learning'
-  return 'review'
-}
-
 export async function addWordsToQueue(userId: string, wordKeys: string[]): Promise<void> {
   if (wordKeys.length === 0) return
   const supabase = await createClient()
@@ -96,12 +78,21 @@ export async function getQueuedAyahNumbers(
 
 // ─── Surah Cards ──────────────────────────────────────────────────────────────
 
-export async function addSurahToQueue(userId: string, surahNumber: number): Promise<void> {
+export async function addSurahToQueue(
+  userId: string,
+  surahNumber: number,
+  chainStart?: number,
+): Promise<void> {
   const supabase = await createClient()
   const base = graduatedCardRow()
 
   await supabase.from('surah_cards').upsert(
-    { user_id: userId, surah_number: surahNumber, ...base },
+    {
+      user_id: userId,
+      surah_number: surahNumber,
+      chain_start: chainStart ?? null,
+      ...base,
+    },
     { onConflict: 'user_id,surah_number', ignoreDuplicates: true }
   )
 }
@@ -122,20 +113,25 @@ export async function isSurahQueued(userId: string, surahNumber: number): Promis
 // Grading is read-modify-write. To keep two near-simultaneous grades on the
 // same card from clobbering each other (we'd lose one stage advance), the
 // UPDATE pins srs_stage to the value we read. If a concurrent grade landed
-// first, the WHERE matches zero rows; we re-read and try once more.
+// first, the WHERE matches zero rows; we re-read and try again.
+//
+// Returns true if the card advanced; false if the card was missing or every
+// retry lost the CAS race. Callers should skip review_log writes on false.
 type CardTable = 'word_cards' | 'ayah_cards' | 'surah_cards'
 
-async function gradeCard(table: CardTable, userId: string, cardId: string, correct: boolean): Promise<void> {
+const GRADE_RETRY_LIMIT = 5
+
+async function gradeCard(table: CardTable, userId: string, cardId: string, correct: boolean): Promise<boolean> {
   const supabase = await createClient()
 
-  for (let attempt = 0; attempt < 2; attempt++) {
+  for (let attempt = 0; attempt < GRADE_RETRY_LIMIT; attempt++) {
     const { data } = await supabase
       .from(table)
       .select('srs_stage')
       .eq('id', cardId)
       .eq('user_id', userId)
       .maybeSingle()
-    if (!data) return
+    if (!data) return false
 
     const next = gradeCardRow(data.srs_stage, correct)
     const { data: updated } = await supabase
@@ -146,19 +142,20 @@ async function gradeCard(table: CardTable, userId: string, cardId: string, corre
       .eq('srs_stage', data.srs_stage)
       .select('id')
       .maybeSingle()
-    if (updated) return
+    if (updated) return true
   }
+  return false
 }
 
-export function gradeWordCard(userId: string, cardId: string, correct: boolean): Promise<void> {
+export function gradeWordCard(userId: string, cardId: string, correct: boolean): Promise<boolean> {
   return gradeCard('word_cards', userId, cardId, correct)
 }
 
-export function gradeAyahCard(userId: string, cardId: string, correct: boolean): Promise<void> {
+export function gradeAyahCard(userId: string, cardId: string, correct: boolean): Promise<boolean> {
   return gradeCard('ayah_cards', userId, cardId, correct)
 }
 
-export function gradeSurahCard(userId: string, cardId: string, correct: boolean): Promise<void> {
+export function gradeSurahCard(userId: string, cardId: string, correct: boolean): Promise<boolean> {
   return gradeCard('surah_cards', userId, cardId, correct)
 }
 
@@ -268,8 +265,10 @@ export interface DailyLearningStatus {
 
 export async function getDailyLearningStatus(userId: string): Promise<DailyLearningStatus> {
   const supabase = await createClient()
-  const now = new Date()
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString()
+  // Rolling 24-hour window. Using server-local midnight previously bucketed
+  // "today" in UTC, which forced PT users into a new day at 5pm and JST users
+  // 8 hours after their actual midnight.
+  const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
 
   const [prefs, wordsToday] = await Promise.all([
     supabase.from('preferences').select('daily_new_words').eq('user_id', userId).maybeSingle(),
@@ -278,7 +277,7 @@ export async function getDailyLearningStatus(userId: string): Promise<DailyLearn
       .select('word_key', { count: 'exact', head: true })
       .eq('user_id', userId)
       .eq('card_type', 'transliteration')
-      .gte('created_at', todayStart)
+      .gte('created_at', oneDayAgo)
       .lt('srs_stage', 9), // exclude preloaded
   ])
 

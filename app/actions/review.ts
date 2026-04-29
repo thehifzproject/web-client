@@ -69,7 +69,7 @@ export async function getDueReviewCards(): Promise<ReviewCard[]> {
       .limit(MAX_DUE_PER_TYPE),
     supabase
       .from('surah_cards')
-      .select('id,surah_number')
+      .select('id,surah_number,chain_start')
       .eq('user_id', user.id)
       .lte('due', now)
       .gt('srs_stage', 0)
@@ -233,7 +233,17 @@ export async function getDueReviewCards(): Promise<ReviewCard[]> {
 
       const windowSize = Math.min(5, entry.ayahCount)
       const maxStart = Math.max(1, entry.ayahCount - windowSize + 1)
-      const chainStart = Math.floor(Math.random() * maxStart) + 1
+      // Persist chain_start on first review so the user sees the same window
+      // across reviews (the SRS schedule has no notion of which window).
+      let chainStart: number | null = row.chain_start ?? null
+      if (chainStart == null) {
+        chainStart = Math.floor(Math.random() * maxStart) + 1
+        await supabase
+          .from('surah_cards')
+          .update({ chain_start: chainStart })
+          .eq('id', row.id)
+          .eq('user_id', user.id)
+      }
 
       const chainVerse = surahText.verses.find(v => v.verseNumber === chainStart)
       cards.push({
@@ -248,20 +258,36 @@ export async function getDueReviewCards(): Promise<ReviewCard[]> {
     }
   }
 
+  // Drop cards whose upstream Quran data didn't resolve (network failure on a
+  // surah we don't have cached). Showing them would prompt the user with an
+  // empty Arabic block and grade their answer against an empty string.
+  const resolved = cards.filter(c => {
+    if (c.type === 'word_transliteration' || c.type === 'word_meaning') {
+      return !!c.wordArabic && !!c.wordTransliteration && !!c.wordMeaning
+    }
+    if (c.type === 'ayah_identify' || c.type === 'ayah_recite') {
+      return !!c.ayahArabic
+    }
+    if (c.type === 'surah_chain') {
+      return !!c.chainArabic
+    }
+    return true
+  })
+
   // Shuffle cards for variety
-  return shuffle(cards)
+  return shuffle(resolved)
 }
 
 export async function submitReview(
   cardId: string,
   cardType: ReviewCardType,
   correct: boolean
-): Promise<void> {
+): Promise<{ ok: boolean }> {
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  if (!user) return
+  if (!user) return { ok: false }
 
   const cardTableMap: Record<string, 'word_cards' | 'ayah_cards' | 'surah_cards'> = {
     word_transliteration: 'word_cards',
@@ -271,13 +297,19 @@ export async function submitReview(
     surah_chain: 'surah_cards',
   }
 
+  let advanced = false
   if (cardType === 'word_transliteration' || cardType === 'word_meaning') {
-    await gradeWordCard(user.id, cardId, correct)
+    advanced = await gradeWordCard(user.id, cardId, correct)
   } else if (cardType === 'ayah_identify' || cardType === 'ayah_recite') {
-    await gradeAyahCard(user.id, cardId, correct)
+    advanced = await gradeAyahCard(user.id, cardId, correct)
   } else if (cardType === 'surah_chain') {
-    await gradeSurahCard(user.id, cardId, correct)
+    advanced = await gradeSurahCard(user.id, cardId, correct)
   }
 
-  await logReviewActivity(user.id, cardTableMap[cardType], cardId, correct)
+  // Only log when the card actually advanced. Otherwise the calendar would
+  // show a review for a card that never moved (lost CAS race or row missing).
+  if (advanced) {
+    await logReviewActivity(user.id, cardTableMap[cardType], cardId, correct)
+  }
+  return { ok: advanced }
 }

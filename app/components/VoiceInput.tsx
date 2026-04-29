@@ -95,9 +95,47 @@ export function VoiceInput({
     rafRef.current = requestAnimationFrame(tick)
   }
 
+  // Pick the first MediaRecorder mimeType the browser actually supports.
+  // Safari < 16 doesn't support audio/webm; Safari 16+ supports audio/mp4.
+  function pickMimeType(): string | null {
+    if (typeof MediaRecorder === 'undefined') return null
+    const candidates = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg']
+    for (const t of candidates) {
+      if (MediaRecorder.isTypeSupported(t)) return t
+    }
+    return null
+  }
+
   async function startRecording() {
+    if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
+      setState('error')
+      setErrorMsg('Voice not supported in this browser')
+      return
+    }
+
+    const mimeType = pickMimeType()
+    if (!mimeType) {
+      setState('error')
+      setErrorMsg('Voice not supported in this browser')
+      return
+    }
+
+    let stream: MediaStream
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+    } catch (err) {
+      // DOMException name distinguishes denial vs other failures.
+      const name = (err as { name?: string }).name
+      setState('error')
+      setErrorMsg(
+        name === 'NotAllowedError' || name === 'SecurityError'
+          ? 'Microphone permission denied'
+          : 'Could not access microphone'
+      )
+      return
+    }
+
+    try {
       streamRef.current = stream
 
       const ctx = new AudioContext()
@@ -108,7 +146,7 @@ export function VoiceInput({
       source.connect(analyser)
       analyserRef.current = analyser
 
-      const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm' })
+      const recorder = new MediaRecorder(stream, { mimeType })
       recorderRef.current = recorder
       chunksRef.current = []
 
@@ -116,7 +154,7 @@ export function VoiceInput({
         if (e.data.size > 0) chunksRef.current.push(e.data)
       }
       recorder.onstop = async () => {
-        const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
+        const blob = new Blob(chunksRef.current, { type: mimeType })
         cleanup()
         setState('transcribing')
         try {
@@ -148,7 +186,7 @@ export function VoiceInput({
       hardCapTimerRef.current = setTimeout(() => stopRecording(), HARD_CAP_MS)
     } catch {
       setState('error')
-      setErrorMsg('Microphone permission denied')
+      setErrorMsg('Could not start recording')
       cleanup()
     }
   }

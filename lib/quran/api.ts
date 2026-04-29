@@ -1,7 +1,7 @@
 import type { QuranVerse, QuranSurahText, QuranSurahAudio } from './types'
 
 /** Resolve a word-level audio_url (may be relative) to an absolute URL */
-export function resolveWordAudioUrl(audioUrl: string): string {
+function resolveWordAudioUrl(audioUrl: string): string {
   if (!audioUrl) return ''
   if (/^https?:\/\//i.test(audioUrl)) return audioUrl
   return `https://verses.quran.foundation/${audioUrl.replace(/^\/+/, '')}`
