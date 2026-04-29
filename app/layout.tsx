@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Amiri, Crimson_Pro, DM_Sans } from 'next/font/google'
+import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 
 const amiri = Amiri({
@@ -38,6 +39,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className={`${amiri.variable} ${crimsonPro.variable} ${dmSans.variable}`}>
         {children}
+        <Analytics />
       </body>
     </html>
   )
