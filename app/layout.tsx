@@ -80,6 +80,18 @@ export const metadata: Metadata = {
       'Free, open-source Quran memorization with spaced repetition. Word by word, ayah by ayah, surah by surah.',
   },
   formatDetection: { telephone: false, email: false, address: false },
+  icons: {
+    // Browser tabs honor prefers-color-scheme: dark logo on light bg, white logo on dark bg.
+    // The unconditioned entry at the end is the fallback Google Search and other crawlers use.
+    icon: [
+      { url: '/logo-black.png', media: '(prefers-color-scheme: light)', type: 'image/png', sizes: '480x480' },
+      { url: '/logo-white.png', media: '(prefers-color-scheme: dark)', type: 'image/png', sizes: '480x480' },
+      { url: '/logo-black.png', type: 'image/png', sizes: '480x480' },
+    ],
+    // iOS home screen — doesn't honor prefers-color-scheme, ships single icon
+    apple: [{ url: '/logo-black.png', sizes: '180x180', type: 'image/png' }],
+    shortcut: ['/logo-black.png'],
+  },
 }
 
 export const viewport: Viewport = {
