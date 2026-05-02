@@ -97,8 +97,9 @@ export async function getChapterWords(surahNumber: number): Promise<QuranVerse[]
 }
 
 export async function getSurahText(surahNumber: number): Promise<QuranSurahText> {
-  // v2: meaning switched to The Clear Quran (Dr. Mustafa Khattab) from quran.com (translation 131)
-  const key = `surah:${surahNumber}:text:clearquran:v2`
+  // v4: meaning switched to Abdullah Yusuf Ali (translation 22) so phrasing matches
+  // quran.com's word-by-word glosses (e.g. "Most Gracious, Most Merciful").
+  const key = `surah:${surahNumber}:text:yusufali:v4`
   const cached = await getCached<QuranSurahText>(key)
   const rawText = cached ?? await fetchSurahText(surahNumber)
 

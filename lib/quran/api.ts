@@ -37,8 +37,11 @@ export async function fetchChapterWords(surahNumber: number): Promise<QuranVerse
 export async function fetchSurahText(surahNumber: number): Promise<QuranSurahText> {
   // Arabic + transliteration come from alquran.cloud
   const cloudUrl = `https://api.alquran.cloud/v1/surah/${surahNumber}/editions/quran-uthmani,en.transliteration`
-  // Meaning comes from quran.com — translation ID 131 is The Clear Quran by Dr. Mustafa Khattab
-  const qcUrl = `https://api.quran.com/api/v4/quran/translations/131?chapter_number=${surahNumber}`
+  // Meaning comes from quran.com — translation ID 22 is Abdullah Yusuf Ali.
+  // Picked specifically because its phrasing ("Most Gracious, Most Merciful", etc.)
+  // aligns with quran.com's word-by-word glosses, so the per-word meanings shown
+  // during browsing match the full-ayah meaning instead of contradicting it.
+  const qcUrl = `https://api.quran.com/api/v4/quran/translations/22?chapter_number=${surahNumber}`
 
   const [cloudRes, qcRes] = await Promise.all([
     fetch(cloudUrl, { next: { revalidate: 86400 } }),
@@ -61,8 +64,12 @@ export async function fetchSurahText(surahNumber: number): Promise<QuranSurahTex
       verseNumber: a.numberInSurah,
       arabic: a.text,
       transliteration: transliteration.ayahs[i]?.text ?? '',
-      // Strip footnote tags (e.g. <sup foot_note=...>1</sup>) that quran.com embeds
-      meaning: (translations[i]?.text ?? '').replace(/<[^>]*>/g, '').trim(),
+      // Strip <sup>…</sup> footnote markers and any other inline tags that quran.com embeds.
+      // Saheeh Intl puts the footnote digit *inside* the sup tag, so we drop the whole element first.
+      meaning: (translations[i]?.text ?? '')
+        .replace(/<sup[^>]*>.*?<\/sup>/gi, '')
+        .replace(/<[^>]*>/g, '')
+        .trim(),
     })),
   }
 }
