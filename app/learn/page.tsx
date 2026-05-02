@@ -33,32 +33,23 @@ interface TestItem {
 
 const MAX_RETRIES = 2
 
-// Module-scoped Web Audio resources so playAudio can be called from non-React
+// Module-scoped audio element so playAudio can be called from non-React
 // helpers (BrowseCard, TestCard) without prop-drilling. The component cleans
-// these up on unmount via stopAndCloseAudio().
-let audioCtx: AudioContext | null = null
-let currentSource: AudioBufferSourceNode | null = null
+// it up on unmount via stopAndCloseAudio(). We use HTMLAudioElement instead
+// of Web Audio API because alquran.cloud's audio CDN doesn't send CORS
+// headers, which would block fetch()+decodeAudioData but doesn't affect
+// plain <audio> playback (no-cors media request).
+let currentAudio: HTMLAudioElement | null = null
 function playAudio(url: string) {
   if (!url) return
-  if (currentSource) { try { currentSource.stop() } catch {} currentSource = null }
-  if (!audioCtx || audioCtx.state === 'closed') audioCtx = new AudioContext()
-  fetch(url)
-    .then(r => r.arrayBuffer())
-    .then(buf => audioCtx!.decodeAudioData(buf))
-    .then(decoded => {
-      const src = audioCtx!.createBufferSource()
-      src.buffer = decoded
-      src.connect(audioCtx!.destination)
-      src.start(0)
-      currentSource = src
-    })
-    .catch(() => {})
+  if (currentAudio) { currentAudio.pause(); currentAudio.src = ''; currentAudio = null }
+  const audio = new Audio(url)
+  audio.play().catch(err => console.warn('audio play failed', err))
+  currentAudio = audio
 }
 
 function stopAndCloseAudio() {
-  if (currentSource) { try { currentSource.stop() } catch {} currentSource = null }
-  if (audioCtx && audioCtx.state !== 'closed') audioCtx.close().catch(() => {})
-  audioCtx = null
+  if (currentAudio) { currentAudio.pause(); currentAudio.src = ''; currentAudio = null }
 }
 
 function buildWordTests(words: WordItem[]): TestItem[] {
